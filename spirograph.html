@@ -1,0 +1,191 @@
+<canvas id="myCanvas" width="600" height="600" style="border:1px solid #000000;">
+</canvas>
+<div id='addwheel'>
+<table id='addwheel-table'>
+<tr id='addwheel-table-title'>
+<h1>Wheels</h1>
+</tr>
+
+<tr id='wheel-size'>
+<section>
+<label for='wheel-size-input'>Size: </label>
+<input type='number' id='wheel-size-input'></input>
+<button type='submit' id='add-wheel'>Add Wheel</button>
+</section>
+<p id='display-wheels'>Wheels: </p>
+<section>
+<label for='remove-wheel'>Remove:</label>
+<select id='remove-wheel'></select>
+<button type='submit' id='remove-wheel-button'>Remove</button>
+</section>
+</tr>
+
+<tr id='addpoint-title'>
+<h1>Points</h1>
+</tr>
+
+<tr id='pencil-points'>
+<section>
+<label for='pencil-points-input'>Add pencil point: </label>
+<input type='number' id='pencil-points-input'></input>
+<button type='submit' id='add-pencil-points'>Add Point</button>
+</section>
+<p id='display-pencil-points'>Points: </p>
+<section>
+<lavel for='remove-point'>Remove:</label>
+<select id='remove-point'></select>
+<button type='submit' id='remove-point-button'>Remove</button>
+</section>
+</tr>
+
+<tr id='update'>
+<section>
+<button type='submit' id='update-button'>Update</button>
+</section>
+</tr>
+</table>
+</div>
+<script>var wheels = [],
+    points = [],
+    precision = 0.1,
+    canvas = document.getElementById('myCanvas'),
+    offcanvas = document.createElement('canvas'),
+    wheel_button = document.getElementById('add-wheel'),
+    update_button = document.getElementById('update-button'),
+    point_button = document.getElementById('add-pencil-points'),
+    remove_wheel_button = document.getElementById('remove-wheel-button'),
+    remove_point_button = document.getElementById('remove-point-button');
+
+add_wheel = function(size) {
+    wheels.push(size);
+    wheels.sort(function(a, b){return b-a});
+    let list = document.getElementById('display-wheels'),
+        select = document.getElementById('remove-wheel'), 
+        option = document.createElement('option'), 
+        whee = 'Wheels: ';
+    for (i in wheels) {
+        whee += wheels[i];
+        (i < wheels.length - 1) && (whee += ', ')
+    }
+    list.innerHTML = whee;
+    option.value = size;
+    option.text = size;
+    select.add(option, wheels.indexOf(parseInt(option.text)));
+}
+add_point = function(size) {
+    points.push(size);
+    points.sort(function(a, b){return b-a});
+    let list = document.getElementById('display-pencil-points'),
+        select = document.getElementById('remove-point'), 
+        option = document.createElement('option'), 
+        whee = 'Points: ';
+    for (i in points) {
+        whee += points[i];
+        (i < points.length - 1) && (whee += ', ')
+    }
+    list.innerHTML = whee;
+    option.value = size;
+    option.text = size;
+    select.add(option, points.indexOf(parseInt(option.text)));
+}
+remove_wheel = function(wheel) {
+    let list = document.getElementById('display-wheels'),
+        select = document.getElementById('remove-wheel');
+    console.log(wheels[wheel], wheel)
+    select.remove(wheel);
+    wheels.splice(wheel, 1);
+    let whee = 'Wheels: ';
+    for (i in wheels) {
+        whee += wheels[i];
+        (i < wheels.length - 1) && (whee += ', ')
+    }
+    list.innerHTML = whee
+}
+remove_point = function(wheel) {
+    let list = document.getElementById('display-pencil-points'),
+        select = document.getElementById('remove-point');
+    console.log(points[wheel], wheel)
+    select.remove(wheel);
+    points.splice(wheel, 1);
+    let whee = 'Points: ';
+    for (i in points) {
+        whee += points[i];
+        (i < points.length - 1) && (whee += ', ')
+    }
+    list.innerHTML = whee
+}
+wheel_button.onclick = function(){let size = parseInt(document.getElementById('wheel-size-input').value); add_wheel(size)}
+remove_wheel_button.onclick = function(){let wheel = document.getElementById('remove-wheel').selectedIndex; console.log(wheel); remove_wheel(wheel)}        
+point_button.onclick = function(){let size = parseInt(document.getElementById('pencil-points-input').value); add_point(size)}
+remove_point_button.onclick = function(){let point = document.getElementById('remove-point').selectedIndex; console.log(point); remove_point(point)}     
+
+update = function(precision, points, wheels, canvas) {
+    let gcd = function(a, b) {
+        return !b ? a : gcd(b, a % b);
+    },
+
+    lcm = function(a, b) {
+        return (a * b) / gcd(a, b);   
+    },
+    getpoints = function(points, thetas, wheels) {
+        let cx = 0, cy = 0, circles = [], endpoints = [];
+        for (let i = 0; i < wheels.length - 1; i++) {
+            cx += Math.cos(thetas[i]) * (wheels[i] - (wheels[i + 1] != undefined ? wheels[i + 1] : 0));
+            cy += Math.sin(thetas[i]) * (wheels[i] - (wheels[i + 1] != undefined ? wheels[i + 1] : 0));
+            circles.push([cx, cy]);
+        };
+        let ethetax = Math.cos(thetas[thetas.length - 1]), ethetay = Math.sin(thetas[thetas.length - 1]);
+        for (let i = 0; i < points.length; i++) {
+            endpoints.push([(cx + (ethetax * points[i])), (cy + (ethetay * points[i]))]);
+        }
+        return [endpoints, circles];
+    },
+    rotations = 1,
+    thetas = [],
+    dthetas = [precision],
+    pcircum = (Math.PI * (2 * wheels[0])),
+    times = -1,
+    canv = canvas.getContext('2d'),
+    pdrawpoints = [],
+    delta = 0,
+    ccircum = 0,
+    //scale = 1;
+    //scale = 150 / ((points[points.length - 1] < wheels[wheels.length - 1]) ? wheels[0] : wheels[0] - wheels[wheels.length - 1] + points[points.length - 1]);
+    scale = 300 / ((wheels[0] - wheels[wheels.length - 1]) + points[0]);
+    for (i in wheels) {
+        rotations = lcm(rotations, wheels[i])
+        thetas.push(0)
+    }
+    canv.clearRect(0, 0, 600, 600);
+    rotations /= wheels[0]
+    for (let i = 1; i < wheels.length; i++) {
+        let item = wheels[i];
+        ccircum = (Math.PI * (2 * item));
+        delta = (360 / (ccircum / ((pcircum / 360) * precision)));
+        dthetas.push(delta * times);
+        times *= -1;
+        pcircum = ccircum;
+    }
+    canv.strokeStyle = '#000000'
+    console.log(window.wheels, wheels, rotations, scale, dthetas)
+    for (let i = 0; i < rotations; i++) {
+        canv.beginPath();
+        for (let j = 0; j < 360; j += precision) {
+            var drawpoints = getpoints(points, thetas, wheels)[0];
+            //console.log(drawpoints, 'drawpoints', i);
+            //=!jdfii
+            //console.log(getpoints(window.points, thetas, window.wheels));
+            for (k in drawpoints) {
+                pdrawpoints[k] != undefined && (canv.moveTo((scale * pdrawpoints[k][0]) + 300, (scale * pdrawpoints[k][1]) + 300), canv.lineTo((scale * drawpoints[k][0]) + 300, (scale * drawpoints[k][1]) + 300));
+            }
+            for (l in thetas) {
+                thetas[l] = thetas[l] + dthetas[l]
+            }
+            //console.log(thetas, drawpoints)
+            pdrawpoints = drawpoints;
+        }
+        canv.stroke();
+        console.log(drawpoints, pdrawpoints);
+    }
+}
+update_button.onclick = function() {update(precision, points, wheels, canvas)}</script>

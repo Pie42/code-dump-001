@@ -1,0 +1,207 @@
+<canvas id="myCanvas" width="600" height="600" style="border:0px solid #000000;">
+</canvas>
+<script>canvas = document.getElementById('myCanvas');
+offcanvas = document.createElement('canvas')
+
+var width = prompt("How wide would you like the maze to be?"), height = prompt("How tall would you like the maze to be?");
+var maze = [], row = [];
+
+for (let i = 0; i < height; i++) {
+    for (let j = 0; j < width; j++) {
+        row.push('000000')
+    }
+    maze.push(row)
+    row = []
+}
+console.log(maze)
+var x = 0,
+    y = 0,
+    maxsize = 20,
+    steps = 0,
+    done = false,
+    pdir = [],
+    xmin = 0,
+    xmax = (width <= maxsize) ? width : maxsize,
+    ymin = 0,
+    ymax = (height <= maxsize) ? height : maxsize,
+    xmid = (xmin + xmax) / 2,
+    ymid = (ymin + ymax) / 2,
+    trailstyle = '#888888',
+    playerstyle = '#000000';
+
+offcanvas.width  = (width * 600) / xmax;
+offcanvas.height = (height * 600) / ymax;
+console.log(offcanvas.width)
+
+for (let j = 0; j < width * height * 2; j++) {
+    let dirs = [0, 1, 2, 3],
+        ndirs = [], index = -1,
+        fails = 0;
+    while (dirs.length > 0) {
+        index = Math.floor(Math.random() * dirs.length)
+        ndirs.push(dirs[index])
+        dirs.splice(index, 1)
+    }
+    for (i in ndirs) {
+        let item = ndirs[i]
+        if (item == 0) {
+            if (maze[(y - 1)] != undefined && maze[(y - 1)][x] == '000000' && maze[(y - 1)][x][4] != '1') {
+                maze[y][x] = maze[y][x].slice(0, 3) + '1' + maze[y][x].slice(4)
+                y--
+                pdir.push(0)
+                break
+            }
+            else {fails += 1}
+        }
+        if (item == 1) {
+            if (maze[y][(x + 1)] == '000000' && maze[y][(x + 1)][4] != '1') {
+                maze[y][x] = maze[y][x].slice(0, 2) + '1' + maze[y][x].slice(3)
+                x++
+                pdir.push(1)
+                break
+            }
+            else {fails += 1}
+        }
+        if (item == 2) {
+            if (maze[(y + 1)] != undefined && maze[(y + 1)][x] == '000000' && maze[(y + 1)][x][4] != '1') {
+                maze[y][x] = maze[y][x][0] + '1' + maze[y][x].slice(2)
+                y++
+                pdir.push(2)
+                break
+            }
+            else {fails += 1}
+        }
+        if (item == 3) {
+            if (maze[y][(x - 1)] == '000000' && maze[y][(x - 1)][4] != '1') {
+                maze[y][x] = '1' + maze[y][x].slice(1)
+                x--
+                pdir.push(3)
+                break
+            }
+            else {fails += 1}
+        }
+    }
+    if (fails == 4) {
+        let cdir = pdir.pop();
+        maze[y][x] = maze[y][x].slice(0, 4) + '10';
+        cdir == 0 && y++;
+        cdir == 1 && x--;
+        cdir == 2 && y--;
+        cdir == 3 && x++;
+        x == 0 && y == 0 && (done = true);
+    }
+}
+
+var ctx = canvas.getContext('2d'), cmx = offcanvas.getContext('2d'), sizex = 600 / xmax, sizey = 600 / ymax;
+
+function firstrender(sizex, sizey, maze, xmin, xmax, ymin, ymax) {
+    let ctx = offcanvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillRect(0, 0, 600, 600)
+    ctx.fillStyle = '#000000'
+    ctx.strokeStyle = '#000000'
+    for (var i = 0; i <= offcanvas.width; i += sizex) {
+        for (var j = 0; j <= offcanvas.height; j += sizey) {
+            ctx.strokeRect(i, j, sizex, sizey)
+        }
+    }
+    ctx.strokeStyle = '#FFFFFF'
+    ctx.lineWidth = 2
+    for (var row = 0; row < height; row++) {
+        mrow = maze[row]
+        for (var col = 0; col < width; col++) {
+            let y = (row - ymin) * sizex, x = (col - xmin) * sizex;
+            mcol = mrow[col];
+            mcol[5] == '1' && (ctx.fillStyle = trailstyle, ctx.fillRect(x + 2, y + 2, sizex - 4, sizey - 4));
+            ctx.beginPath();
+            ctx.moveTo(x + 1, y);
+            if (mcol[3] == '1') {
+                ctx.lineTo(x + sizex - 1, y)
+            }
+            else {
+                ctx.moveTo(x + sizex - 1, y)
+            }
+            ctx.stroke()
+            ctx.moveTo(x + sizex, y + 1)
+            if (mcol[2] == '1') {
+                ctx.lineTo(x + sizex, y + sizey - 1)
+            }
+            else {
+                ctx.moveTo(x + sizex, y + sizey - 1)
+            }
+            ctx.stroke()
+            ctx.moveTo(x + sizex - 1, y + sizey)
+            if (mcol[1] == '1') {
+                ctx.lineTo(x + 1, y + sizey)
+            }
+            else {
+                ctx.moveTo(x + 1, y + sizey)
+            }
+            ctx.stroke()
+            ctx.moveTo(x, y + sizey - 1)
+            if (mcol[0] == '1') {
+                ctx.lineTo(x, y + 1)
+            }
+            else {
+                ctx.moveTo(x, y + 1)
+            }
+            ctx.stroke()
+        }
+    }
+}
+function render(minx, miny, scalex, scaley) {
+    canvas.getContext('2d').clearRect(0, 0, 600, 600)
+    canvas.getContext('2d').drawImage(offcanvas, -1 * minx * scalex, -1 * miny * scaley)
+}
+firstrender(sizex, sizey, maze, xmin, xmax, ymin, ymax)
+canvas.getContext('2d').drawImage(offcanvas, 0, 0);
+class player{
+    constructor(x, y) {
+        this.x = x
+        this.y = y
+        this.viewx = x
+        this.viewy = y
+    }
+}
+player.prototype.render = function (sizex, sizey, style) {
+    ctx.fillStyle = style
+    ctx.fillRect((sizex * this.viewx) + 2, (sizey * this.viewy) + 2, sizex - 4, sizey - 4);
+    cmx.fillstyle = style
+    cmx.fillRect((sizex * this.x) + 2, (sizey * this.y) + 2, sizex - 4, sizey - 4);
+}
+player.prototype.addtrail = function (x, y, sizex, sizey, style, viewx, viewy) {
+    ctx.fillStyle = style
+    ctx.fillRect((sizex * viewx) + 2, (sizey * viewy) + 2, sizex - 4, sizey - 4);
+    cmx.fillStyle = style
+    cmx.fillRect((sizex * x) + 2, (sizey * y) + 2, sizex - 4, sizey - 4);
+    maze[y][x] = maze[y][x].slice(0, 5) + '1'
+}
+player.prototype.move = function(direction) {
+    this.addtrail(this.x, this.y, sizex, sizey, trailstyle, this.viewx, this.viewy);
+    (this.x < width && this.y < height && this.x >= 0 && this.y >= 0) &&
+    //steps++, console.log(steps),
+    (((direction == 0 && this.y - 1 >= 0 &&     (maze[this.y][this.x][3] == '1' || maze[this.y - 1][this.x][1] == '1')) && (steps++, this.y--, this.viewy--)) ||  
+     ((direction == 1 && this.x + 1 < width &&  (maze[this.y][this.x][2] == '1' || maze[this.y][this.x + 1][0] == '1')) && (steps++, this.x++, this.viewx++)) || 
+     ((direction == 2 && this.y + 1 < height && (maze[this.y][this.x][1] == '1' || maze[this.y + 1][this.x][3] == '1')) && (steps++, this.y++, this.viewy++)) || 
+     ((direction == 3 && this.x - 1 >= 0 &&     (maze[this.y][this.x][0] == '1' || maze[this.y][this.x - 1][2] == '1')) && (steps++, this.x--, this.viewx--)));
+    let cammove = false;
+    ((this.x > xmid) && (xmax < width)  && (xmin++, xmax++, xmid++, cammove = true, this.viewx--)) || 
+    ((this.x < xmid) && (xmin > 0)      && (xmin--, xmax--, xmid--, cammove = true, this.viewx++));
+    ((this.y > ymid) && (ymax < height) && (ymin++, ymax++, ymid++, cammove = true, this.viewy--)) || 
+    ((this.y < ymid) && (ymin > 0)      && (ymin--, ymax--, ymid--, cammove = true, this.viewy++));
+    cammove && render(xmin, ymin, sizex, sizey);
+    this.render(sizex, sizey, playerstyle);
+    console.log(this.x, this.y, 'maybe after move');
+    (this.x == width - 1 && this.y == height - 1) && alert('You won! Steps:' + steps.toString());
+}
+player.prototype.inputs = function(key) {
+    (event.key == 'i' || event.key == 'w' || event.key === 'ArrowUp') && you.move(0);
+    (event.key == 'l' || event.key == 'd' || event.key === 'ArrowRight') && you.move(1);
+    (event.key == 'k' || event.key == 's' || event.key === 'ArrowDown') && you.move(2);
+    (event.key == 'j' || event.key == 'a' || event.key === 'ArrowLeft') && you.move(3);
+}
+var you = new player(0, 0)
+you.render(sizex, sizey)
+document.addEventListener("keydown", function onEvent(event) {
+    you.inputs(event)
+})</script>

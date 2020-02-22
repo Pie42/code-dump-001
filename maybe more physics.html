@@ -1,0 +1,126 @@
+<canvas id="myCanvas" width="600" height="600" style="border:0px solid #000000;">
+</canvas>
+<script>
+    var vadd = function(v1, v2) {
+        let tempv1 = [Math.cos(v1[0]) * v1[1], Math.sin(v1[0]) * v1[1]],
+            tempv2 = [Math.cos(v2[0]) * v2[1], Math.sin(v2[0]) * v2[1]];
+        return [tempv1[0] + tempv2[0], tempv1[1] + tempv2[1]]
+    },
+        vadd2 = function(v1, v2) {
+        let tempv2 = [Math.cos(v2[0]) * v2[1], Math.sin(v2[0]) * v2[1]];
+        return [v1[0] + tempv2[0], v1[1] + tempv2[1]];
+    },
+        gwavity = 0.3,
+        grav = [0.5 * Math.PI, gwavity],
+        offcanvas = document.createElement('canvas'),
+        canvas = document.getElementById('myCanvas'),
+        the_ball_says_boing = 0.9,
+        air_is_slow = 0.99,
+        aah_its_fast_in_the_beginning = 20,
+        water_is_wet = false,
+        walls_arent_floors = 0.97,
+        there_is_no_ceiling = 0.9,
+        orbs = [],
+        nbline = [],
+        gpoints = [];
+    offcanvas.width = 64;
+    offcanvas.height = 64;
+    class ball {
+        constructor(x, y, vel, rad) {
+            this.x = x;
+            this.y = y;
+            this.vel = vel;
+            this.rad = rad;
+            this.firstdraw();
+            //window.setInterval(this.update.bind(this), 20);
+        }
+    }
+    ball.prototype.update = function() {
+        //let ctx = canvas.getContext('2d');
+        //ctx.clearRect(this.x - 2 * this.rad, this.y - 2 * this.rad, this.x + 2 * this.rad, this.y + 2 * this.rad);
+        //ctx.clearRect(this.x, this.y, this.x + (2 * this.rad), this.y + (2 * this.rad));
+        var coords = [this.x, this.y],
+            tempcoords = vadd2(coords, this.vel),
+            tempvel = vadd(this.vel, grav),
+            tempvel2 = vadd2(tempvel, [0, 0])//[Math.round(tempvel[0] / Math.PI) * Math.PI, 1]);
+        this.x = tempcoords[0];
+        this.y = tempcoords[1];
+        this.vel = [Math.atan2(tempvel2[1], tempvel2[0]), Math.sqrt((tempvel2[0] ** 2) + (tempvel2[1] ** 2))];
+        (this.y >= 600) && (this.vel[0] *= -1, this.vel[1] *= the_ball_says_boing, this.y = 600);
+        (this.y <= 0) && (this.vel[0] *= -1, this.vel[1] *= there_is_no_ceiling, this.y = 0);
+        //(this.x <= 0 || this.x >= 600) && (this.vel[0] += (2 * ((Math.PI / 2) - this.vel[0])), this.vel[1] *= the_ball_says_boing);
+        (this.x >= 600) && (this.vel[0] += (2 * ((Math.PI / 2) - this.vel[0])), this.vel[1] *= walls_arent_floors, this.x = 600);
+        (this.x <= 0) && (this.vel[0] += (2 * ((Math.PI / 2) - this.vel[0])), this.vel[1] *= walls_arent_floors, this.x = 0);
+        this.vel[1] *= air_is_slow;
+        this.draw();
+        //console.log(this.vel, this.x, this.y);
+    }
+    ball.prototype.firstdraw = function() {
+        var ctx = offcanvas.getContext('2d');
+        ctx.beginPath();
+        for (let i = 0; i < 2 * Math.PI; i += Math.PI / 50) {
+            ctx.lineTo(32 + (Math.cos(i) * this.rad), 32 + (Math.sin(i) * this.rad));
+        };
+        ctx.stroke();
+        ctx.fillStyle = '#000000';
+        ctx.fill();
+    }
+    ball.prototype.draw = function() {
+        let ctx = canvas.getContext('2d');
+        //if (!water_is_wet) {
+        //    ctx.clearRect(0, 0, 600, 600);
+        //}
+        ctx.drawImage(offcanvas, this.x - 25, this.y - 25);
+        //window.setTimeout((ctx.clearRect(this.x - 2 * this.rad, this.y - 2 * this.rad, this.x + 2 * this.rad, this.y + 2 * this.rad)), 19);
+    };
+    function handleMouseDown(e) {
+        nbline = [];
+        window.smousePos = getMousePosition(canvas, e);
+        nbline.push(window.smousePos);
+        nbline.push(window.smousePos);
+        //console.log(window.smousePos, 'hi');
+    // if current position matches the object postion
+    // set a flag and monitor mouse move and mouse up event  
+    }
+    function handleMouseUp(e) {
+        var emousePos = getMousePosition(canvas, e);
+            orbs.push(new ball(window.smousePos.x, window.smousePos.y, [Math. PI + Math.atan2((emousePos.y - window.smousePos.y), (emousePos.x - window.smousePos.x)), Math.sqrt(((emousePos.y - window.smousePos.y) ** 2) + ((emousePos.x - window.smousePos.x) ** 2))], 25));
+        nbline = [];
+    //if your flag is true, then move the object to here and reset flag
+    }
+    function handleMouseMove(e) {
+        var mousePos = getMousePosition(canvas, e);
+        nbline[1] = mousePos;
+    //Handle if you need smooth drag experience
+    }
+    function getMousePosition(canvas, e) {
+        var boundary = canvas.getBoundingClientRect();
+    // (e.clientX, e.clientY)  => Mouse coordinates wrt whole browser
+    //  (boundary.left, boundary.top) => Canvas starting coordinate
+        return {
+            x: e.clientX - boundary.left,  
+            y: e.clientY - boundary.top
+        };
+    }
+    function full_update() {
+        var h = canvas.getContext('2d');
+        h.clearRect(0, 0, 600, 600);
+        if (nbline[0] && nbline.length == 2) {
+            //console.log(nbline)
+            h.beginPath();
+            h.moveTo(nbline[0].x, nbline[0].y);
+            h.lineTo(nbline[1].x, nbline[1].y);
+            h.stroke();
+        }
+        for (item in orbs) {
+            let orb = orbs[item];
+            orb.update()
+        }
+    }
+    var canvas = document.getElementById('myCanvas');
+    canvas.addEventListener('mousemove', handleMouseMove, false);
+    canvas.addEventListener('mousedown', handleMouseDown, false);
+    canvas.addEventListener('mouseup', handleMouseUp, false);  
+    window.setInterval(full_update, 20)
+    //var orb = new ball(0, 100, [0, aah_its_fast_in_the_beginning], 25);
+</script>
