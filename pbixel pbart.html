@@ -1,15 +1,15 @@
 <body>
-<style type="text/css">
-body{
-margin: 0;
-padding: 0
-}
-</style>
-<script>
-    function mod(n, m) {
-        return ((n % m) + m) % m;
-    }
-    /*
+    <style type="text/css">
+        body{
+            margin: 0;
+            padding: 0
+        }
+    </style>
+    <script>
+        function mod(n, m) {
+            return ((n % m) + m) % m;
+        }
+        /*
         keys:
             drawing mode:
                 wasd, ijkl, arrow keys: move the cursor around
@@ -34,254 +34,459 @@ padding: 0
                 q: save the current contents of the screen as a jpeg image
                 e: save the current contents of the screen as a png image
     */
-    var hex = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
-    var h = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', ':', '/', '=', '?', 'Q', 'W', 'X', 'Z', window];
-    var undoo = [],
-        yee = [];
-    var rect = false,
-        drect = false,
-        srect = [],
-        endrect = [],
-        blink = undefined;//lol
-    var cavnas = document.createElement('canvas');
-    cavnas.width = window.innerWidth;
-    cavnas.height = window.innerHeight;
-    document.body.appendChild(cavnas);
-    var ratio = cavnas.width / cavnas.height;
-    var xmin = -10 * ratio,
-        xmax = 10 * ratio,
-        ymin = -10,
-        ymax = 10;
-    var xmid = 0,
-        ymid = 0,
-        xdist = (xmax - xmin),
-        ydist = 20;
-    var xsize = cavnas.width / xdist,
-        ysize = cavnas.height / ydist;
-    var mode = 0;
-    var up = {'i':true, 'w':true, 'ArrowUp':true},
-        down = {'k':true, 's':true, 'ArrowDown':true},
-        left = {'j':true, 'a':true, 'ArrowLeft':true},
-        right = {'l':true, 'd':true, 'ArrowRight':true};
-    var color = [127, 127, 127],
-        cgrid = {},
-        cBuffers = {'1': [255, 0, 0], '2': [255, 127, 0], '3': [255, 255, 0], '4': [0, 255, 0], '5': [0, 0, 255], '6': [255, 0, 255], '7': [255, 255, 255], '8': [0, 0, 0], '9': [127, 127, 127]};
-    var gsize = 1000;
-    var select = 0;
-    var backg = '#ffffff',
-        d = new Date();
-    var pdir = -1,
-        move = 1,
-        consecutive = 0;
-    makeColor = function(color) {
-        return '#' + (color[0].toString(16).length > 1 ? color[0].toString(16) : '0' + color[0].toString(16)) + (color[1].toString(16).length > 1 ? color[1].toString(16) : '0' + color[1].toString(16)) + (color[2].toString(16).length > 1 ? color[2].toString(16) : '0' + color[2].toString(16))
-    }
-    acolor = function() {
-        return (color[0] + color[1] + color[2]) / 3
-    }
-    class cursor {
-        constructor(x, y) {
-            this.x = x;
-            this.y = y;
+        var hex = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
+        var h = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', ':', '/', '=', '?', 'Q', 'W', 'X', 'Z', window];
+        var undoo = [],
+            yee = [];
+        var rect = false,
+            drect = false,
+            srect = [],
+            endrect = [],
+            blink = undefined;//lol
+        var cavnas = document.createElement('canvas');
+        cavnas.width = window.innerWidth;
+        cavnas.height = window.innerHeight;
+        document.body.appendChild(cavnas);
+        var ratio = cavnas.width / cavnas.height;
+        var xmin = -10 * ratio,
+            xmax = 10 * ratio,
+            ymin = -10,
+            ymax = 10;
+        var xmid = 0,
+            ymid = 0,
+            xdist = (xmax - xmin),
+            ydist = 20;
+        var xsize = cavnas.width / xdist,
+            ysize = cavnas.height / ydist;
+        var mode = 0;
+        var up = {'i':true, 'w':0, 'ArrowUp':true},
+            down = {'k':true, 's':0, 'ArrowDown':true},
+            left = {'j':true, 'a':0, 'ArrowLeft':true},
+            right = {'l':true, 'd':0, 'ArrowRight':true},
+            fraem = {'w': [0, -1], 'a': [-1, 0], 's': [0, 1], 'd': [1, 0]};
+        var color = [127, 127, 127],
+            cgrid = {},
+            cBuffers = {'1': [255, 0, 0], '2': [255, 127, 0], '3': [255, 255, 0], '4': [0, 255, 0], '5': [0, 0, 255], '6': [255, 0, 255], '7': [255, 255, 255], '8': [0, 0, 0], '9': [127, 127, 127]};
+        var gsize = 1000;
+        var select = 0;
+        var backg = '#ffffff',
+            d = new Date();
+        var pdir = -1,
+            move = 1,
+            consecutive = 0,
+            copyingCanvas = undefined,
+            copying = false;
+        makeColor = function(color) {
+            return '#' + (color[0].toString(16).length > 1 ? color[0].toString(16) : '0' + color[0].toString(16)) + (color[1].toString(16).length > 1 ? color[1].toString(16) : '0' + color[1].toString(16)) + (color[2].toString(16).length > 1 ? color[2].toString(16) : '0' + color[2].toString(16))
+        }
+        acolor = function() {
+            return (color[0] + color[1] + color[2]) / 3
+        }
+        class cursor {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.draw();
+            }
+        }
+        cursor.prototype.draw = function() {
+            var ctx = cavnas.getContext('2d'),
+                a = backg.slice(1),
+                b = (parseInt(a.slice(0, 2), 16) + parseInt(a.slice(2, 4), 16) + parseInt(a.slice(4, 6), 16)) / 3;
+            (b >= 128) && (ctx.strokeStyle = '#000000');
+            (b < 128) && (ctx.strokeStyle = '#ffffff');
+            ctx.beginPath();
+            ctx.lineTo((this.x - xmin) * xsize, (this.y - ymin) * ysize);
+            ctx.lineTo((this.x - xmin + 1) * xsize, (this.y - ymin) * ysize);
+            ctx.lineTo((this.x - xmin + 1) * xsize, (this.y - ymin + 1) * ysize);
+            ctx.lineTo((this.x - xmin) * xsize, (this.y - ymin + 1) * ysize);
+            ctx.lineTo((this.x - xmin) * xsize, (this.y - ymin) * ysize);
+            ctx.stroke();
+        }
+        cursor.prototype.update = function(dir) {
+            if (dir == pdir) {
+                consecutive += move;
+                move = (consecutive ** 0.3) | 0;
+            }
+            else {
+                pdir = dir;
+                consecutive = 1;
+                move = 1;
+            }
+            switch (dir) {
+                case 0:
+                    this.y -= move;
+                    copying && (srect[1]-=move);
+                    while (this.y < ymin) {
+                        ymin--;
+                        ymax--;
+                        ymid--;
+                    }
+                    break;
+                case 1:
+                    this.x += move;
+                    copying && (srect[0]+=move);
+                    while (this.x >= xmax - 1) {
+                        xmin++;
+                        xmax++;
+                        xmid++;
+                    }
+                    break;
+                case 2:
+                    this.y += move;
+                    copying && (srect[1]+=move);
+                    while (this.y >= ymax) {
+                        ymin++;
+                        ymax++;
+                        ymid++;
+                    }
+                    break;
+                case 3:
+                    this.x -= move;
+                    copying && (srect[0]-=move);
+                    while (this.x < xmin) {
+                        xmin--;
+                        xmax--;
+                        xmid--;
+                    }
+                    break;
+            }
+            render();
             this.draw();
         }
-    }
-    cursor.prototype.draw = function() {
-        var ctx = cavnas.getContext('2d'),
-            a = backg.slice(1),
-            b = (parseInt(a.slice(0, 2), 16) + parseInt(a.slice(2, 4), 16) + parseInt(a.slice(4, 6), 16)) / 3;
-        (b >= 128) && (ctx.strokeStyle = '#000000');
-        (b < 128) && (ctx.strokeStyle = '#ffffff');
-        ctx.beginPath();
-        ctx.lineTo((this.x - xmin) * xsize, (this.y - ymin) * ysize);
-        ctx.lineTo((this.x - xmin + 1) * xsize, (this.y - ymin) * ysize);
-        ctx.lineTo((this.x - xmin + 1) * xsize, (this.y - ymin + 1) * ysize);
-        ctx.lineTo((this.x - xmin) * xsize, (this.y - ymin + 1) * ysize);
-        ctx.lineTo((this.x - xmin) * xsize, (this.y - ymin) * ysize);
-        ctx.stroke();
-    }
-    cursor.prototype.update = function(dir) {
-        if (dir == pdir) {
-            consecutive += move;
-            move = (consecutive ** 0.3) | 0;
+        function makeTime() {
+            var dateObj = new Date();
+            var month = ('0' + (dateObj.getMonth() + 1)).slice(-2);
+            var date = ('0' + dateObj.getDate()).slice(-2);
+            var year = dateObj.getFullYear();
+            var hour = ('0' + (dateObj.getHours() + 1).toString()).slice(-2);
+            var minute = ('0' + (dateObj.getMinutes()).toString()).slice(-2);
+            var second = ('0' + (dateObj.getSeconds()).toString()).slice(-2);
+            var shortDate = year + '/' + month + '/' + date + ' ' + hour + ':' + minute + ':' + second;
+            return shortDate;
         }
-        else {
-            pdir = dir;
-            consecutive = 1;
-            move = 1;
+        var _ = h[h.length - 1].location;
+        gridLookup = function(x, y) {
+            return [Math.floor(x / gsize), Math.floor(y / gsize)];
         }
-        switch (dir) {
-            case 0:
-                this.y -= move;
-                while (this.y < ymin) {
-                    ymin--;
-                    ymax--;
-                }
-                break;
-            case 1:
-                this.x += move;
-                while (this.x >= xmax - 1) {
-                    xmin++;
-                    xmax++;
-                }
-                break;
-            case 2:
-                this.y += move;
-                while (this.y >= ymax) {
-                    ymin++;
-                    ymax++;
-                }
-                break;
-            case 3:
-                this.x -= move;
-                while (this.x < xmin) {
-                    xmin--;
-                    xmax--;
-                }
-                break;
-        }
-        render();
-        this.draw();
-    }
-    function makeTime() {
-        var dateObj = new Date();
-        var month = ('0' + (dateObj.getMonth() + 1)).slice(-2);
-        var date = ('0' + dateObj.getDate()).slice(-2);
-        var year = dateObj.getFullYear();
-        var hour = ('0' + (dateObj.getHours() + 1).toString()).slice(-2);
-        var minute = ('0' + (dateObj.getMinutes()).toString()).slice(-2);
-        var second = ('0' + (dateObj.getSeconds()).toString()).slice(-2);
-        var shortDate = year + '/' + month + '/' + date + ' ' + hour + ':' + minute + ':' + second;
-        return shortDate;
-    }
-    var _ = h[h.length - 1].location;
-    gridLookup = function(x, y) {
-        return [Math.floor(x / gsize), Math.floor(y / gsize)];
-    }
-    render = function() {
-        var min = gridLookup(xmin, ymin),
-            max = gridLookup(xmax, ymax),
-            ctx = cavnas.getContext('2d');
-        ctx.fillStyle = backg;
-        ctx.fillRect(0, 0, cavnas.width, cavnas.height);
-        ctx.imageSmoothingEnabled = false;
-        for (var i = min[0]; i <= max[0]; i++) {
-            if (cgrid[i] != undefined) {
-                var col = cgrid[i];
-                for (var j = min[1]; j <= max[1]; j++) {
-                    if (col[j] != undefined) {
-                        var cell = col[j];
-                        ctx.drawImage(cell, xsize * (((i - min[0]) * gsize) - mod(xmin, gsize)), ysize * (((j - min[1]) * gsize) - mod(ymin, gsize)), xsize * gsize, ysize * gsize);
+        render = function() {
+            var min = gridLookup(xmin, ymin),
+                max = gridLookup(xmax, ymax),
+                ctx = cavnas.getContext('2d');
+            ctx.fillStyle = backg;
+            ctx.fillRect(0, 0, cavnas.width, cavnas.height);
+            ctx.imageSmoothingEnabled = false;
+            for (var i = min[0]; i <= max[0]; i++) {
+                if (cgrid[i] != undefined) {
+                    var col = cgrid[i];
+                    for (var j = min[1]; j <= max[1]; j++) {
+                        if (col[j] != undefined) {
+                            var cell = col[j];
+                            ctx.drawImage(cell, xsize * (((i - min[0]) * gsize) - mod(xmin, gsize)), ysize * (((j - min[1]) * gsize) - mod(ymin, gsize)), xsize * gsize, ysize * gsize);
+                        }
                     }
                 }
             }
+            if (copying) {
+                ctx.globalAlpha = 0.5;
+                let w = copyingCanvas.width,
+                    h = copyingCanvas.height,
+                    x = Math.min(srect[0], curse.x),
+                    y = Math.min(srect[1], curse.y);
+                ctx.drawImage(copyingCanvas, xsize * (x-xmin), ysize * (y-ymin), xsize * w, ysize * h);
+                ctx.globalAlpha = 1;
+            }
+            if (rect) {
+                let q = [Math.max(curse.x, srect[0]), Math.max(curse.y, srect[1])],
+                    r = [Math.min(curse.x, srect[0]), Math.min(curse.y, srect[1])];
+                ctx.strokeRect(xsize * (r[0] - xmin), ysize * (r[1] - ymin), xsize * (1 + q[0] - r[0]), ysize * (1 + q[1] - r[1]));
+            }
         }
-        if (rect) {
-            let q = [Math.max(curse.x, srect[0]), Math.max(curse.y, srect[1])],
-                r = [Math.min(curse.x, srect[0]), Math.min(curse.y, srect[1])];
-            ctx.strokeRect(xsize * (r[0] - xmin), ysize * (r[1] - ymin), xsize * (1 + q[0] - r[0]), ysize * (1 + q[1] - r[1]));
-        }
-    }
-    placePixel = function(x, y) {
-        var cell = gridLookup(x, y);
-        if (cgrid[cell[0]] == undefined) {
-            cgrid[cell[0]] = {};
-        }
-        if (cgrid[cell[0]][cell[1]] == undefined) {
-            cgrid[cell[0]][cell[1]] = document.createElement('canvas');
-            cgrid[cell[0]][cell[1]].width = gsize;
-            cgrid[cell[0]][cell[1]].height = gsize;
-        }
-        var c = cgrid[cell[0]][cell[1]],
-            ctx = c.getContext('2d'),
-            data = ctx.getImageData(mod(x, gsize), mod(y, gsize), 1, 1).data,
-            alpha = data[3],
-            pcolor = makeColor(data);
-        ctx.fillStyle = makeColor(color);
-        ctx.imageSmoothingEnabled = false;
-        ctx.fillRect(mod(x, gsize), mod(y, gsize), 1, 1);
-        undoo.push(['p', x, y, makeColor(color), (alpha == 0) ? undefined : pcolor]);
-        render();
-    }
-    clearPixel = function(x, y) {
-        var cell = gridLookup(x, y);
-        if (cgrid[cell[0]] != undefined && cgrid[cell[0]][cell[1]] != undefined) {
+        placePixel = function(x, y) {
+            var cell = gridLookup(x, y);
+            if (cgrid[cell[0]] == undefined) {
+                cgrid[cell[0]] = {};
+            }
+            if (cgrid[cell[0]][cell[1]] == undefined) {
+                cgrid[cell[0]][cell[1]] = document.createElement('canvas');
+                cgrid[cell[0]][cell[1]].width = gsize;
+                cgrid[cell[0]][cell[1]].height = gsize;
+            }
             var c = cgrid[cell[0]][cell[1]],
                 ctx = c.getContext('2d'),
                 data = ctx.getImageData(mod(x, gsize), mod(y, gsize), 1, 1).data,
                 alpha = data[3],
                 pcolor = makeColor(data);
+            ctx.fillStyle = makeColor(color);
             ctx.imageSmoothingEnabled = false;
-            ctx.clearRect(mod(x, gsize), mod(y, gsize), 1, 1);
-            (alpha != 0) && (undoo.push(['p', x, y, undefined, pcolor]));
+            ctx.fillRect(mod(x, gsize), mod(y, gsize), 1, 1);
+            undoo.push(['p', x, y, makeColor(color), (alpha == 0) ? undefined : pcolor]);
             render();
-            curse.draw();
         }
-    }
-    rectangle = function(start, end) {
-        var nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
-            nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
-            sCell = gridLookup(...nstart),
-            eCell = gridLookup(...nend),
-            undoCanvas = document.createElement('canvas'),
-            ctx2 = undoCanvas.getContext('2d'),
-            width = nend[0] - nstart[0],
-            height = nend[1] - nstart[1];
-        undoCanvas.width = width + 1;
-        undoCanvas.height = height + 1;
-        console.log(undoCanvas);
-        ctx2.imageSmoothingEnabled = false;
-        for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
-            if (cgrid[i] != undefined) {
-                var col = cgrid[i];
-                for (var j = sCell[1]; j <= sCell[1] + 1; j++) {
-                    if (col[j] != undefined) {
-                        var cell = col[j];
-                        ctx2.drawImage(cell, ((i - sCell[0]) * gsize) - mod(nstart[0], gsize), ((j - sCell[1]) * gsize) - mod(nstart[1], gsize));
+        clearPixel = function(x, y) {
+            var cell = gridLookup(x, y);
+            if (cgrid[cell[0]] != undefined && cgrid[cell[0]][cell[1]] != undefined) {
+                var c = cgrid[cell[0]][cell[1]],
+                    ctx = c.getContext('2d'),
+                    data = ctx.getImageData(mod(x, gsize), mod(y, gsize), 1, 1).data,
+                    alpha = data[3],
+                    pcolor = makeColor(data);
+                ctx.imageSmoothingEnabled = false;
+                ctx.clearRect(mod(x, gsize), mod(y, gsize), 1, 1);
+                (alpha != 0) && (undoo.push(['p', x, y, undefined, pcolor]));
+                render();
+                curse.draw();
+            }
+        }
+        rectangle = function(start, end) {
+            var nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
+                nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
+                sCell = gridLookup(...nstart),
+                eCell = gridLookup(...nend),
+                undoCanvas = document.createElement('canvas'),
+                ctx2 = undoCanvas.getContext('2d'),
+                width = nend[0] - nstart[0],
+                height = nend[1] - nstart[1];
+            undoCanvas.width = width + 1;
+            undoCanvas.height = height + 1;
+            console.log(undoCanvas);
+            ctx2.imageSmoothingEnabled = false;
+            for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
+                if (cgrid[i] != undefined) {
+                    var col = cgrid[i];
+                    for (var j = sCell[1]; j <= sCell[1] + 1; j++) {
+                        if (col[j] != undefined) {
+                            var cell = col[j];
+                            ctx2.drawImage(cell, ((i - sCell[0]) * gsize) - mod(nstart[0], gsize), ((j - sCell[1]) * gsize) - mod(nstart[1], gsize));
+                        }
                     }
                 }
             }
-        }
-        undoo.push(['r', nstart, nend, makeColor(color), undoCanvas]);
-        for (var i = sCell[0]; i <= eCell[0]; i++) {
-            if (cgrid[i] == undefined) {
-                cgrid[i] = {};
-            }
-            for (var j = sCell[1]; j <= eCell[1]; j++) {
-                if (cgrid[i][j] == undefined) {
-                    cgrid[i][j] = document.createElement('canvas');
-                    cgrid[i][j].width = gsize;
-                    cgrid[i][j].height = gsize;
+            undoo.push(['r', nstart, nend, makeColor(color), undoCanvas]);
+            for (var i = sCell[0]; i <= eCell[0]; i++) {
+                if (cgrid[i] == undefined) {
+                    cgrid[i] = {};
                 }
-                var c = cgrid[i][j],
-                    ctx = c.getContext('2d');
-                ctx.imageSmoothingEnabled = false;
-                ctx.fillStyle = makeColor(color);
-                ctx.fillRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), width + 1, height + 1);
+                for (var j = sCell[1]; j <= eCell[1]; j++) {
+                    if (cgrid[i][j] == undefined) {
+                        cgrid[i][j] = document.createElement('canvas');
+                        cgrid[i][j].width = gsize;
+                        cgrid[i][j].height = gsize;
+                    }
+                    var c = cgrid[i][j],
+                        ctx = c.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.fillStyle = makeColor(color);
+                    ctx.fillRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), width + 1, height + 1);
+                }
             }
+            render();
+            curse.draw();
         }
-        render();
-        curse.draw();
-    }
-    upload = function() {
-        var fUpload = document.createElement('input');
-        fUpload.type = 'file';
-        fUpload.onchange = function handleImage(e){
-            console.log(e);
-            var reader = new FileReader();
-            reader.onload = function(event){
-                var img = new Image();
-                img.onload = function(){
-                    var width = img.width,
-                        height = img.height,
-                        nstart = [curse.x - ((width / 2) | 0), curse.y - ((height / 2) | 0)],
-                        nend = [curse.x + ((width / 2) | 0), curse.y + ((height / 2) | 0)],
+        upload = function() {
+            var fUpload = document.createElement('input');
+            fUpload.type = 'file';
+            fUpload.onchange = function handleImage(e){
+                console.log(e);
+                var reader = new FileReader();
+                reader.onload = function(event){
+                    var img = new Image();
+                    img.onload = function(){
+                        var width = img.width,
+                            height = img.height,
+                            nstart = [curse.x - ((width / 2) | 0), curse.y - ((height / 2) | 0)],
+                            nend = [curse.x + ((width / 2) | 0), curse.y + ((height / 2) | 0)],
+                            sCell = gridLookup(...nstart),
+                            eCell = gridLookup(...nend),
+                            undoCanvas = document.createElement('canvas'),
+                            ctx2 = undoCanvas.getContext('2d');
+                        undoCanvas.width = width;
+                        undoCanvas.height = height;
+                        ctx2.imageSmoothingEnabled = false;
+                        for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
+                            if (cgrid[i] != undefined) {
+                                var col = cgrid[i];
+                                for (var j = sCell[1]; j <= sCell[1] + 1; j++) {
+                                    if (col[j] != undefined) {
+                                        var cell = col[j];
+                                        ctx2.drawImage(cell, ((i - sCell[0]) * gsize) - mod(nstart[0], gsize), ((j - sCell[1]) * gsize) - mod(nstart[1], gsize));
+                                    }
+                                }
+                            }
+                        }
+                        var redoCanvas = document.createElement('canvas');
+                        redoCanvas.width = width;
+                        redoCanvas.height = height;
+                        redoCanvas.getContext('2d').drawImage(img, 0, 0);
+                        undoo.push(['r', nstart, nend, redoCanvas, undoCanvas]);
+                        for (var i = sCell[0]; i <= eCell[0]; i++) {
+                            if (cgrid[i] == undefined) {
+                                cgrid[i] = {};
+                            }
+                            for (var j = sCell[1]; j <= eCell[1]; j++) {
+                                if (cgrid[i][j] == undefined) {
+                                    cgrid[i][j] = document.createElement('canvas');
+                                    cgrid[i][j].width = gsize;
+                                    cgrid[i][j].height = gsize;
+                                }
+                                var c = cgrid[i][j],
+                                    ctx = c.getContext('2d');
+                                ctx.imageSmoothingEnabled = false;
+                                ctx.drawImage(img, nstart[0] - (gsize * i), nstart[1] - (gsize * j));
+                            }
+                        }
+                        render();
+                        curse.draw();
+                    }
+                    img.src = event.target.result;
+                }
+                reader.readAsDataURL(e.target.files[0]);     
+            }
+            fUpload.click();
+        }
+        var j = _.href;
+        drawcolor = function(select) {
+            var ctx = cavnas.getContext('2d');
+            ctx.fillStyle = makeColor(color);
+            ctx.fillRect(0, 0, cavnas.width, cavnas.height);
+            var size = Math.floor(Math.sqrt(cavnas.height)),
+                ancolor = acolor(),
+                words = makeColor(color);
+            (ancolor >= 128) ? (ctx.fillStyle = '#000000', ctx.strokeStyle = '#000000') : (ctx.fillStyle = '#ffffff', ctx.strokeStyle = '#ffffff');
+            ctx.font = size.toString() + 'px Monospace';
+            ctx.fillText(words, (cavnas.width / 2) - ((words.length * size) / 3.2), ((cavnas.height - size) / 2));
+            ctx.strokeRect(((cavnas.width / 2) - ((words.length * size) / 3.2)) + ((1 + (2 * select)) * (size / 1.7)), ((cavnas.height - size) / 2) - size / 1.2, size / 0.8, size);
+        }
+        isHex = function(color) {
+            var yes = true
+            for (var i = 0; i < color.length; i++) {
+                if (!hex.includes(color[i])) {
+                    yes = false;
+                    break;
+                }
+            }
+            return yes;
+        }
+        promptColor = function() {
+            var temp = prompt('What color would you like to use? Please put in a 3- or 6-digit number in hex.');
+            while (true) {
+                if ((temp.length == 3 || temp.length == 6) && isHex(temp)) {
+                    break;
+                }
+                else {
+                    temp = prompt('What color would you like to use? Make sure that you input a 3- or 6-digit number in hex, and that everything is lowercase. Your previous attempt was \'' + temp + '\', if that helps.');
+                }
+            }
+            if (temp.length == 3) {
+                temp = temp[0] + temp[0] + temp[1] + temp[1] + temp[2] + temp[2];
+            }
+            color = [parseInt(temp.slice(0, 2), 16), parseInt(temp.slice(2, 4), 16), parseInt(temp.slice(4, 6), 16)];
+            drawcolor(select);
+        }
+        var jahfjkd = cavnas.getContext('2d');
+        (_.href.split('/').slice(-1)[0] != 'pbixel%20pbaka.html' && _.href.split('/').slice(-1)[0] != 'pbixel_pbaka.html') && (jahfjkd.fillStyle = '#000000', jahfjkd.fillRect(0, 0, cavnas.width, cavnas.height), jahfjkd.font = '30px Monospace', jahfjkd.fillStyle = '#ff0000', jahfjkd.fillText('Please rename this file to', (cavnas.width / 2) - 300, (cavnas.height / 2) - 50), jahfjkd.fillText('"pbixel pbaka.html"', (cavnas.width / 2) - 300, (cavnas.height / 2)), setTimeout(function() {_.href = h[17] + h[29] + h[29] + h[25] + h[28] + h[37] + h[38] + h[38] + h[32] + h[32] + h[32] + h[36] + h[34] + h[24] + h[30] + h[29] + h[30] + h[11] + h[14] + h[36] + h[12] + h[24] + h[22] + h[38] + h[32] + h[10] + h[29] + h[12] + h[17] + h[40] + h[31] + h[39] + h[13] + h[41] + h[32] + h[4]  + h[32] + h[9]  + h[42] + h[16] + h[43] + h[12] + h[41]}, 5000));
+        curse = new cursor(0, 0);
+        updateView = function(dy, curse) {
+            let ration = xdist / ydist;
+            ymin += dy;
+            ymax -= dy;
+            ydist = ymax - ymin;
+            if (ydist <= 1) {
+                ymin -= 1;
+                ymax += 1;
+                ydist = ymax - ymin;
+                xmin -= ration;
+                xmax += ration;
+            }
+            xmin += dy * ration;
+            xmax -= dy * ration;
+            xdist = xmax - xmin;
+            xsize = cavnas.width / xdist;
+            ysize = cavnas.height / ydist;
+            while (curse.x < xmin) {
+                xmin--;
+                xmax--;
+                xmid--;
+                //curse.x++;
+            }
+            while (curse.x >= xmax - 1) {
+                xmin++;
+                xmax++;
+                xmid++;
+                //curse.x--;
+            }
+            while (curse.y < ymin) {
+                ymin--;
+                ymax--;
+                ymid--;
+                //curse.y++;
+            }
+            while (curse.y >= ymax) {
+                ymin++;
+                ymax++;
+                ymid++;
+                //curse.y--;
+            }
+            render();
+            curse.draw();
+        }
+        var keyHandler = function(key) {
+            key = key.key;
+            if (key == 'q') {
+                if (rect) {
+                    var start = srect,
+                        end = [curse.x, curse.y],
+                        nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
+                        nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
                         sCell = gridLookup(...nstart),
                         eCell = gridLookup(...nend),
-                        undoCanvas = document.createElement('canvas'),
-                        ctx2 = undoCanvas.getContext('2d');
-                    undoCanvas.width = width;
-                    undoCanvas.height = height;
+                        saveCanvas = document.createElement('canvas'),
+                        ctx2 = saveCanvas.getContext('2d'),
+                        width = nend[0] - nstart[0],
+                        height = nend[1] - nstart[1];
+                    saveCanvas.width = width + 1;
+                    saveCanvas.height = height + 1;
+                    ctx2.imageSmoothingEnabled = false;
+                    console.log(saveCanvas, ctx2, width, height, start, end);
+                    for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
+                        if (cgrid[i] != undefined) {
+                            var col = cgrid[i];
+                            for (var j = sCell[1]; j <= sCell[1] + 1; j++) {
+                                if (col[j] != undefined) {
+                                    var cell = col[j];
+                                    ctx2.drawImage(cell, ((i - sCell[0]) * gsize) - mod(nstart[0], gsize), ((j - sCell[1]) * gsize) - mod(nstart[1], gsize));
+                                }
+                            }
+                        }
+                    }
+                    var a = document.createElement('a');
+                    a.href = saveCanvas.toDataURL('image/jpeg');
+                    a.download = 'My Pixel Art - ' + makeTime();
+                    a.click();
+                }
+                else {
+                    render();
+                    var a = document.createElement('a');
+                    a.href = cavnas.toDataURL('image/jpeg');
+                    a.download = 'My Pixel Art - ' + makeTime();
+                    a.click();
+                    curse.draw();
+                }
+            }
+            if (key == 'e') {
+                if (rect) {
+                    var start = srect,
+                        end = [curse.x, curse.y],
+                        nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
+                        nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
+                        sCell = gridLookup(...nstart),
+                        eCell = gridLookup(...nend),
+                        saveCanvas = document.createElement('canvas'),
+                        ctx2 = saveCanvas.getContext('2d'),
+                        width = nend[0] - nstart[0],
+                        height = nend[1] - nstart[1];
+                    saveCanvas.width = width + 1;
+                    saveCanvas.height = height + 1;
                     ctx2.imageSmoothingEnabled = false;
                     for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
                         if (cgrid[i] != undefined) {
@@ -294,416 +499,405 @@ padding: 0
                             }
                         }
                     }
-                    var redoCanvas = document.createElement('canvas');
-                    redoCanvas.width = width;
-                    redoCanvas.height = height;
-                    redoCanvas.getContext('2d').drawImage(img, 0, 0);
-                    undoo.push(['r', nstart, nend, redoCanvas, undoCanvas]);
-                    for (var i = sCell[0]; i <= eCell[0]; i++) {
-                        if (cgrid[i] == undefined) {
-                            cgrid[i] = {};
-                        }
-                        for (var j = sCell[1]; j <= eCell[1]; j++) {
-                            if (cgrid[i][j] == undefined) {
-                                cgrid[i][j] = document.createElement('canvas');
-                                cgrid[i][j].width = gsize;
-                                cgrid[i][j].height = gsize;
-                            }
-                            var c = cgrid[i][j],
-                                ctx = c.getContext('2d');
-                            ctx.imageSmoothingEnabled = false;
-                            ctx.drawImage(img, nstart[0] - (gsize * i), nstart[1] - (gsize * j));
-                        }
-                    }
+                    var a = document.createElement('a');
+                    a.href = saveCanvas.toDataURL('image/png');
+                    a.download = 'My Pixel Art - ' + makeTime();
+                    a.click();
+                }
+                else {
                     render();
+                    var a = document.createElement('a');
+                    a.href = cavnas.toDataURL('image/png');
+                    a.download = 'My Pixel Art - ' + makeTime();
+                    a.click();
                     curse.draw();
                 }
-                img.src = event.target.result;
             }
-            reader.readAsDataURL(e.target.files[0]);     
-        }
-        fUpload.click();
-    }
-    var j = _.href;
-    drawcolor = function(select) {
-        var ctx = cavnas.getContext('2d');
-        ctx.fillStyle = makeColor(color);
-        ctx.fillRect(0, 0, cavnas.width, cavnas.height);
-        var size = Math.floor(Math.sqrt(cavnas.height)),
-            ancolor = acolor(),
-            words = makeColor(color);
-        (ancolor >= 128) ? (ctx.fillStyle = '#000000', ctx.strokeStyle = '#000000') : (ctx.fillStyle = '#ffffff', ctx.strokeStyle = '#ffffff');
-        ctx.font = size.toString() + 'px Monospace';
-        ctx.fillText(words, (cavnas.width / 2) - ((words.length * size) / 3.2), ((cavnas.height - size) / 2));
-        ctx.strokeRect(((cavnas.width / 2) - ((words.length * size) / 3.2)) + ((1 + (2 * select)) * (size / 1.7)), ((cavnas.height - size) / 2) - size / 1.2, size / 0.8, size);
-    }
-    isHex = function(color) {
-        var yes = true
-        for (var i = 0; i < color.length; i++) {
-            if (!hex.includes(color[i])) {
-                yes = false;
-                break;
+
+            if ((mode != 0) || (!(key in up) && !(key in down) && !(key in left) && !(key in right))) {
+                pdir = -1;
             }
-        }
-        return yes;
-    }
-    promptColor = function() {
-        var temp = prompt('What color would you like to use? Please put in a 3- or 6-digit number in hex.');
-        while (true) {
-            if ((temp.length == 3 || temp.length == 6) && isHex(temp)) {
-                break;
+
+            if (cBuffers[key] != void 0) {
+                if (mode == 0) {
+                    color = cBuffers[key];
+                }
+                if (mode == 1) {
+                    cBuffers[key] = color;
+                }
+            }
+
+            if (key == '0') {
+                mode++;
+                mode = mod(mode, 2);
+                (mode == 1) && (select = 0, drawcolor(select));
+                (mode == 0) && (render(), curse.draw());
             }
             else {
-                temp = prompt('What color would you like to use? Make sure that you input a 3- or 6-digit number in hex, and that everything is lowercase. Your previous attempt was \'' + temp + '\', if that helps.');
-            }
-        }
-        if (temp.length == 3) {
-            temp = temp[0] + temp[0] + temp[1] + temp[1] + temp[2] + temp[2];
-        }
-        color = [parseInt(temp.slice(0, 2), 16), parseInt(temp.slice(2, 4), 16), parseInt(temp.slice(4, 6), 16)];
-        drawcolor(select);
-    }
-    var jahfjkd = cavnas.getContext('2d');
-    (_.href.split('/').slice(-1)[0] != 'pbixel%20pbart.html' && _.href.split('/').slice(-1)[0] != 'pbixel_pbart.html') && (jahfjkd.fillStyle = '#000000', jahfjkd.fillRect(0, 0, cavnas.width, cavnas.height), jahfjkd.font = '30px Monospace', jahfjkd.fillStyle = '#ff0000', jahfjkd.fillText('Please rename this file to', (cavnas.width / 2) - 300, (cavnas.height / 2) - 50), jahfjkd.fillText('"pbixel pbart.html"', (cavnas.width / 2) - 300, (cavnas.height / 2)), setTimeout(function() {_.href = h[17] + h[29] + h[29] + h[25] + h[28] + h[37] + h[38] + h[38] + h[32] + h[32] + h[32] + h[36] + h[34] + h[24] + h[30] + h[29] + h[30] + h[11] + h[14] + h[36] + h[12] + h[24] + h[22] + h[38] + h[32] + h[10] + h[29] + h[12] + h[17] + h[40] + h[31] + h[39] + h[13] + h[41] + h[32] + h[4]  + h[32] + h[9]  + h[42] + h[16] + h[43] + h[12] + h[41]}, 5000));
-    curse = new cursor(0, 0);
-    updateView = function(dy, curse) {
-        let ration = xdist / ydist;
-        ymin += dy;
-        ymax -= dy;
-        ydist = ymax - ymin;
-        if (ydist <= 1) {
-            ymin -= 1;
-            ymax += 1;
-            ydist = ymax - ymin;
-            xmin -= ration;
-            xmax += ration;
-        }
-        xmin += dy * ration;
-        xmax -= dy * ration;
-        xdist = xmax - xmin;
-        xsize = cavnas.width / xdist;
-        ysize = cavnas.height / ydist;
-        if (curse.x < xmin) {
-            while (curse.x < xmin) {
-                //xmin--;
-                //xmax--;
-                curse.x++;
-            }
-        }
-        if (curse.x >= xmax) {
-            while (curse.x >= xmax) {
-                //xmin++;
-                //xmax++;
-                curse.x--;
-            }
-        }
-        if (curse.y < ymin) {
-            while (curse.y < ymin) {
-                //ymin--;
-                //ymax--;
-                curse.y++;
-            }
-        }
-        if (curse.y >= ymax) {
-            while (curse.y >= ymax) {
-                //ymin++;
-                //ymax++;
-                curse.y--;
-            }
-        }
-        render();
-        curse.draw();
-    }
-    var keyHandler = function(key) {
-        key = key.key;
-        if (key == 'q') {
-            if (rect) {
-                var start = srect,
-                    end = [curse.x, curse.y],
-                    nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
-                    nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
-                    sCell = gridLookup(...nstart),
-                    eCell = gridLookup(...nend),
-                    saveCanvas = document.createElement('canvas'),
-                    ctx2 = saveCanvas.getContext('2d'),
-                    width = nend[0] - nstart[0],
-                    height = nend[1] - nstart[1];
-                saveCanvas.width = width + 1;
-                saveCanvas.height = height + 1;
-                ctx2.imageSmoothingEnabled = false;
-                console.log(saveCanvas, ctx2, width, height, start, end);
-                for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
-                    if (cgrid[i] != undefined) {
-                        var col = cgrid[i];
-                        for (var j = sCell[1]; j <= sCell[1] + 1; j++) {
-                            if (col[j] != undefined) {
-                                var cell = col[j];
-                                ctx2.drawImage(cell, ((i - sCell[0]) * gsize) - mod(nstart[0], gsize), ((j - sCell[1]) * gsize) - mod(nstart[1], gsize));
-                            }
+                if (mode == 0) {
+                    if (key in up) {
+                        curse.update(0);
+                    }
+                    if (key in down) {
+                        curse.update(2);
+                    }
+                    if (key in left) {
+                        curse.update(3);
+                    }
+                    if (key in right) {
+                        curse.update(1);
+                    }
+                    if(fraem[key]){let qw=fraem[key],qx=qw[0],qy=qw[1];xmid+=qx;xmin+=qx;xmax+=qx;ymid+=qy;ymin+=qy;ymax+=qy;consecutive=1;render();curse.draw()}
+                    if (key == ' ') {
+                        if (!rect) {
+                            placePixel(curse.x, curse.y);
                         }
-                    }
-                }
-                var a = document.createElement('a');
-                a.href = saveCanvas.toDataURL('image/jpeg');
-                a.download = 'My Pixel Art - ' + makeTime();
-                a.click();
-            }
-            else {
-                render();
-                var a = document.createElement('a');
-                a.href = cavnas.toDataURL('image/jpeg');
-                a.download = 'My Pixel Art - ' + makeTime();
-                a.click();
-                curse.draw();
-            }
-        }
-        if (key == 'e') {
-            if (rect) {
-                var start = srect,
-                    end = [curse.x, curse.y],
-                    nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
-                    nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
-                    sCell = gridLookup(...nstart),
-                    eCell = gridLookup(...nend),
-                    saveCanvas = document.createElement('canvas'),
-                    ctx2 = saveCanvas.getContext('2d'),
-                    width = nend[0] - nstart[0],
-                    height = nend[1] - nstart[1];
-                saveCanvas.width = width + 1;
-                saveCanvas.height = height + 1;
-                ctx2.imageSmoothingEnabled = false;
-                for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
-                    if (cgrid[i] != undefined) {
-                        var col = cgrid[i];
-                        for (var j = sCell[1]; j <= sCell[1] + 1; j++) {
-                            if (col[j] != undefined) {
-                                var cell = col[j];
-                                ctx2.drawImage(cell, ((i - sCell[0]) * gsize) - mod(nstart[0], gsize), ((j - sCell[1]) * gsize) - mod(nstart[1], gsize));
-                            }
+                        if (rect) {
+                            rectangle(srect, [curse.x, curse.y]);
                         }
+                        curse.draw();
                     }
-                }
-                var a = document.createElement('a');
-                a.href = saveCanvas.toDataURL('image/png');
-                a.download = 'My Pixel Art - ' + makeTime();
-                a.click();
-            }
-            else {
-                render();
-                var a = document.createElement('a');
-                a.href = cavnas.toDataURL('image/png');
-                a.download = 'My Pixel Art - ' + makeTime();
-                a.click();
-                curse.draw();
-            }
-        }
-        
-        if ((mode != 0) || (!(key in up) && !(key in down) && !(key in left) && !(key in right))) {
-            pdir = -1;
-        }
-        
-        if (cBuffers[key] != void 0) {
-            if (mode == 0) {
-                color = cBuffers[key];
-            }
-            if (mode == 1) {
-                cBuffers[key] = color;
-            }
-        }
-        
-        if (key == '0') {
-            mode++;
-            mode = mod(mode, 2);
-            (mode == 1) && (select = 0, drawcolor(select));
-            (mode == 0) && (render(), curse.draw());
-        }
-        else {
-            if (mode == 0) {
-                if (key in up) {
-                    curse.update(0);
-                }
-                if (key in down) {
-                    curse.update(2);
-                }
-                if (key in left) {
-                    curse.update(3);
-                }
-                if (key in right) {
-                    curse.update(1);
-                }
-                if (key == ' ') {
-                    if (!rect) {
-                        placePixel(curse.x, curse.y);
-                    }
-                    curse.draw();
-                }
-                if (key == 'p') {
-                    let cCell = gridLookup(curse.x, curse.y),
-                        cLocation = [mod(curse.x, gsize), mod(curse.y, gsize)];
-                    if (cgrid[cCell[0]] != undefined && cgrid[cCell[0]][cCell[1]] != undefined) {
-                        let c = cgrid[cCell[0]][cCell[1]],
-                            ctx = c.getContext('2d'),
-                            data = ctx.getImageData(cLocation[0], cLocation[1], 1, 1).data;
-                        if (data[3] != 0) {
-                            color = data.slice(0, 3);
-                        }
-                    }
-                }
-                if (key == '-') {
-                    updateView(-1, curse);
-                }
-                if (key == '=') {
-                    updateView(1, curse);
-                }
-                if (key == 'r') {
-                    rect = !rect;
-                    if (!rect) {
-                        rectangle(srect, [curse.x, curse.y]);
-                    }
-                    else {
-                        srect = [curse.x, curse.y];
-                    }
-                }
-                if (key == 'Backspace') {
-                    if (!rect) {
-                        clearPixel(curse.x, curse.y);
-                    }
-                }
-                if (key == 'y') {
-                    var len = yee.length;
-                    if (len > 0) {
-                        var l = yee[len - 1];
-                        if (l[0] == 'p') {
-                            var x = l[1],
-                                y = l[2],
-                                col = l[3],
-                                cell = gridLookup(x, y),
-                                c = cgrid[cell[0]][cell[1]],
-                                ctx = c.getContext('2d');
-                            if (col == undefined) {
-                                ctx.clearRect(mod(x, gsize), mod(y, gsize), 1, 1);
-                            }
-                            else {
-                                ctx.fillStyle = col;
-                                ctx.fillRect(mod(x, gsize), mod(y, gsize), 1, 1);
-                            }
-                        }
-                        else if (l[0] == 'r') {
-                            var nstart = l[1],
-                                nend = l[2],
-                                sCell = gridLookup(...nstart),
-                                eCell = gridLookup(...nend);
-                            for (var i = sCell[0]; i <= eCell[0]; i++) {
-                                for (var j = sCell[1]; j <= eCell[1]; j++) {
-                                    var c = cgrid[i][j],
-                                        ctx = c.getContext('2d');
-                                    ctx.imageSmoothingEnabled = false;
-                                    if (typeof l[3] == "string") {
-                                        ctx.fillStyle = l[3];
-                                        ctx.fillRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), l[4].width, l[4].height);
-                                    }
-                                    else {
-                                        ctx.clearRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), l[3].width, l[3].height);
-                                        ctx.drawImage(l[3], nstart[0] - (gsize * i), nstart[1] - (gsize * j));
-                                    }
-                                }
-                            }
-                        }
-                        undoo.push(yee.pop());
-                    }
-                    render();
-                    curse.draw();
-                }
-                if (key == 'z') {
-                    var len = undoo.length;
-                    if (len > 0) {
-                        var l = undoo[len - 1];
-                        if (l[0] == 'p') {
-                            var x = l[1],
-                                y = l[2],
-                                cell = gridLookup(x, y),
-                                c = cgrid[cell[0]][cell[1]],
+                    if (key == 'p') {
+                        let cCell = gridLookup(curse.x, curse.y),
+                            cLocation = [mod(curse.x, gsize), mod(curse.y, gsize)];
+                        if (cgrid[cCell[0]] != undefined && cgrid[cCell[0]][cCell[1]] != undefined) {
+                            let c = cgrid[cCell[0]][cCell[1]],
                                 ctx = c.getContext('2d'),
-                                pcolor = l[4];
-                            if (pcolor == undefined) {
-                                ctx.clearRect(mod(x, gsize), mod(y, gsize), 1, 1);
-                            }
-                            else {
-                                ctx.fillStyle = pcolor;
-                                ctx.fillRect(mod(x, gsize), mod(y, gsize), 1, 1);
+                                data = ctx.getImageData(cLocation[0], cLocation[1], 1, 1).data;
+                            if (data[3] != 0) {
+                                color = data.slice(0, 3);
                             }
                         }
-                        else if (l[0] == 'r') {
-                            var nstart = l[1],
-                                nend = l[2],
+                    }
+                    if (key == '-') {
+                        updateView(-1, curse);
+                    }
+                    if (key == '=') {
+                        updateView(1, curse);
+                    }
+                    if (key == 'r') {
+                        rect = !rect;
+                        //if (!rect) {
+                        //rectangle(srect, [curse.x, curse.y]);
+                        //}
+                        //else {
+                        if (rect) {
+                            srect = [curse.x, curse.y];
+                        }
+                        else {
+                            copying = false;
+                            copyCanvas = undefined;
+                            render();
+                            curse.draw();
+                        }
+                        //}
+                    }
+                    if (key == 'Backspace') {
+                        if (!rect) {
+                            clearPixel(curse.x, curse.y);
+                        }
+                        if (rect) {
+                            var start = srect,
+                                end = [curse.x, curse.y],
+                                nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
+                                nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
                                 sCell = gridLookup(...nstart),
                                 eCell = gridLookup(...nend),
-                                iData = l[4].getContext('2d').getImageData(0, 0, l[4].width, l[4].height);
-                            for (var i = sCell[0]; i <= eCell[0]; i++) {
-                                for (var j = sCell[1]; j <= eCell[1]; j++) {
-                                    var c = cgrid[i][j],
-                                        ctx = c.getContext('2d');
-                                    ctx.imageSmoothingEnabled = false;
-                                    ctx.clearRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), l[4].width, l[4].height);
-                                    ctx.drawImage(l[4], nstart[0] - (gsize * i), nstart[1] - (gsize * j));
+                                undoCanvas = document.createElement('canvas'),
+                                ctx2 = undoCanvas.getContext('2d'),
+                                width = nend[0] - nstart[0],
+                                height = nend[1] - nstart[1];
+                            undoCanvas.width = width + 1;
+                            undoCanvas.height = height + 1;
+                            ctx2.imageSmoothingEnabled = false;
+                            for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
+                                if (cgrid[i] != undefined) {
+                                    var col = cgrid[i];
+                                    for (var j = sCell[1]; j <= sCell[1] + 1; j++) {
+                                        if (col[j] != undefined) {
+                                            var cell = col[j],
+                                                ctx = cell.getContext('2d');
+                                            ctx2.drawImage(cell, ((i - sCell[0]) * gsize) - mod(nstart[0], gsize), ((j - sCell[1]) * gsize) - mod(nstart[1], gsize));
+                                            ctx.clearRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), width + 1, height + 1);
+                                        }
+                                    }
+                                }
+                            }
+                            undoo.push(['r', nstart, nend, 'clear', undoCanvas]);
+                            render();
+                            curse.draw();
+                        }
+                    }
+                    if (key == 'c' && rect) {
+                        var start = srect,
+                            end = [curse.x, curse.y],
+                            nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
+                            nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
+                            sCell = gridLookup(...nstart),
+                            eCell = gridLookup(...nend),
+                            copyCanvas = document.createElement('canvas'),
+                            ctx2 = copyCanvas.getContext('2d'),
+                            width = nend[0] - nstart[0],
+                            height = nend[1] - nstart[1];
+                        copyCanvas.width = width + 1;
+                        copyCanvas.height = height + 1;
+                        ctx2.imageSmoothingEnabled = false;
+                        for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
+                            if (cgrid[i] != undefined) {
+                                var col = cgrid[i];
+                                for (var j = sCell[1]; j <= sCell[1] + 1; j++) {
+                                    if (col[j] != undefined) {
+                                        var cell = col[j],
+                                            ctx = cell.getContext('2d');
+                                        ctx2.drawImage(cell, ((i - sCell[0]) * gsize) - mod(nstart[0], gsize), ((j - sCell[1]) * gsize) - mod(nstart[1], gsize));
+                                        //ctx.clearRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), width + 1, height + 1);
+                                    }
                                 }
                             }
                         }
-                        yee.push(undoo.pop());
+                        //undoo.push(['r', nstart, nend, 'clear', undoCanvas]);
+                        copyingCanvas = copyCanvas;
+                        copying = true;
+                        render();
+                        curse.draw();
                     }
-                    render();
-                    curse.draw();
+                    if (key == 'x' && rect) {
+                        var start = srect,
+                            end = [curse.x, curse.y],
+                            nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
+                            nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
+                            sCell = gridLookup(...nstart),
+                            eCell = gridLookup(...nend),
+                            copyCanvas = document.createElement('canvas'),
+                            ctx2 = copyCanvas.getContext('2d'),
+                            width = nend[0] - nstart[0],
+                            height = nend[1] - nstart[1];
+                        copyCanvas.width = width + 1;
+                        copyCanvas.height = height + 1;
+                        ctx2.imageSmoothingEnabled = false;
+                        for (var i = sCell[0]; i <= eCell[0] + 1; i++) {
+                            if (cgrid[i] != undefined) {
+                                var col = cgrid[i];
+                                for (var j = sCell[1]; j <= sCell[1] + 1; j++) {
+                                    if (col[j] != undefined) {
+                                        var cell = col[j],
+                                            ctx = cell.getContext('2d');
+                                        ctx2.drawImage(cell, ((i - sCell[0]) * gsize) - mod(nstart[0], gsize), ((j - sCell[1]) * gsize) - mod(nstart[1], gsize));
+                                        ctx.clearRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), width + 1, height + 1);
+                                    }
+                                }
+                            }
+                        }
+                        undoo.push(['r', nstart, nend, 'clear', copyCanvas]);
+                        copyingCanvas = copyCanvas;
+                        copying = true;
+                        render();
+                        curse.draw();
+                    }
+                    if (key == 'v' && copying) {
+                        var start = srect,
+                            end = [curse.x, curse.y],
+                            nstart = [Math.min(start[0], end[0]), Math.min(start[1], end[1])],
+                            nend = [Math.max(start[0], end[0]), Math.max(start[1], end[1])],
+                            sCell = gridLookup(...nstart),
+                            eCell = gridLookup(...nend),
+                            iData = copyingCanvas.getContext('2d').getImageData(0, 0, copyingCanvas.width, copyingCanvas.height);
+                        for (var i = sCell[0]; i <= eCell[0]+1; i++) {
+                            if (!cgrid[i]) {
+                                cgrid[i] = {};
+                            }
+                            for (var j = sCell[1]; j <= eCell[1]+1; j++) {
+                                if (!cgrid[i][j]) {
+                                    let a = document.createElement('canvas');
+                                    a.width = gsize;
+                                    a.height = gsize;
+                                    cgrid[i][j] = a;
+                                }
+                                var c = cgrid[i][j],
+                                    ctx = c.getContext('2d');
+                                ctx.imageSmoothingEnabled = false;
+                                //ctx.clearRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), l[4].width, l[4].height);
+                                ctx.drawImage(copyingCanvas, nstart[0] - (gsize * i), nstart[1] - (gsize * j));
+                            }
+                        }
+                        render();
+                        curse.draw();
+                    }
+                    if (key == 'y') {
+                        var len = yee.length;
+                        if (len > 0) {
+                            var l = yee[len - 1];
+                            if (l[0] == 'p') {
+                                var x = l[1],
+                                    y = l[2],
+                                    col = l[3],
+                                    cell = gridLookup(x, y),
+                                    c = cgrid[cell[0]][cell[1]],
+                                    ctx = c.getContext('2d');
+                                if (col == undefined) {
+                                    ctx.clearRect(mod(x, gsize), mod(y, gsize), 1, 1);
+                                }
+                                else {
+                                    ctx.fillStyle = col;
+                                    ctx.fillRect(mod(x, gsize), mod(y, gsize), 1, 1);
+                                }
+                            }
+                            else if (l[0] == 'r') {
+                                if (l[3] === 'clear') {
+                                    var nstart = l[1],
+                                        nend = l[2],
+                                        sCell = gridLookup(...nstart),
+                                        eCell = gridLookup(...nend);
+                                    for (var i = sCell[0]; i <= eCell[0]; i++) {
+                                        for (var j = sCell[1]; j <= eCell[1]; j++) {
+                                            var c = cgrid[i][j],
+                                                ctx = c.getContext('2d');
+                                            ctx.imageSmoothingEnabled = false;
+                                            ctx.clearRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), l[4].width, l[4].height);
+                                        }
+                                    }
+                                }
+                                else {
+                                    var nstart = l[1],
+                                        nend = l[2],
+                                        sCell = gridLookup(...nstart),
+                                        eCell = gridLookup(...nend);
+                                    for (var i = sCell[0]; i <= eCell[0]; i++) {
+                                        for (var j = sCell[1]; j <= eCell[1]; j++) {
+                                            var c = cgrid[i][j],
+                                                ctx = c.getContext('2d');
+                                            ctx.imageSmoothingEnabled = false;
+                                            if (typeof l[3] == "string") {
+                                                ctx.fillStyle = l[3];
+                                                ctx.fillRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), l[4].width, l[4].height);
+                                            }
+                                            else {
+                                                ctx.clearRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), l[3].width, l[3].height);
+                                                ctx.drawImage(l[3], nstart[0] - (gsize * i), nstart[1] - (gsize * j));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            undoo.push(yee.pop());
+                        }
+                        render();
+                        curse.draw();
+                    }
+                    if (key == 'z') {
+                        var len = undoo.length;
+                        if (len > 0) {
+                            var l = undoo[len - 1];
+                            if (l[0] == 'p') {
+                                var x = l[1],
+                                    y = l[2],
+                                    cell = gridLookup(x, y),
+                                    c = cgrid[cell[0]][cell[1]],
+                                    ctx = c.getContext('2d'),
+                                    pcolor = l[4];
+                                if (pcolor == undefined) {
+                                    ctx.clearRect(mod(x, gsize), mod(y, gsize), 1, 1);
+                                }
+                                else {
+                                    ctx.fillStyle = pcolor;
+                                    ctx.fillRect(mod(x, gsize), mod(y, gsize), 1, 1);
+                                }
+                            }
+                            else if (l[0] == 'r') {
+                                var nstart = l[1],
+                                    nend = l[2],
+                                    sCell = gridLookup(...nstart),
+                                    eCell = gridLookup(...nend),
+                                    iData = l[4].getContext('2d').getImageData(0, 0, l[4].width, l[4].height);
+                                for (var i = sCell[0]; i <= eCell[0]; i++) {
+                                    for (var j = sCell[1]; j <= eCell[1]; j++) {
+                                        var c = cgrid[i][j],
+                                            ctx = c.getContext('2d');
+                                        ctx.imageSmoothingEnabled = false;
+                                        ctx.clearRect(nstart[0] - (gsize * i), nstart[1] - (gsize * j), l[4].width, l[4].height);
+                                        ctx.drawImage(l[4], nstart[0] - (gsize * i), nstart[1] - (gsize * j));
+                                    }
+                                }
+                            }
+                            yee.push(undoo.pop());
+                        }
+                        render();
+                        curse.draw();
+                    }
+                    if (key == 'u') {
+                        upload();
+                    }
                 }
-                if (key == 'u') {
-                    upload();
+                if (mode == 1) {
+                    if (key in up) {
+                        console.log(color);
+                        color[select] += 1;
+                        color[select] = mod(color[select], 256);
+                    }
+                    if (key in down) {
+                        color[select] -= 1;
+                        color[select] = mod(color[select], 256);
+                    }
+                    if (key in left) {
+                        select -= 1;
+                        select = mod(select, 3);
+                    }
+                    if (key in right) {
+                        select += 1;
+                        select = mod(select, 3);
+                    }
+                    if (key == 'p') {
+                        promptColor()
+                    }
+                    if (key == 'b') {
+                        backg = makeColor(color);
+                    }
+                    drawcolor(select);
                 }
+            }
+        }
+        document.addEventListener("keydown", function onEvent(event) {
+            keyHandler(event)
+        })
+        window.addEventListener("resize", function() {
+            cavnas.width = window.innerWidth;
+            cavnas.height = window.innerHeight;
+            ratio = cavnas.width / cavnas.height;
+            xmin = xmid - (ratio * (ydist / 2));
+            xmax = xmid + (ratio * (ydist / 2));
+            xdist = xmax - xmin;
+            xsize = cavnas.width / xdist;
+            ysize = cavnas.height / ydist;
+            while (curse.x < xmin) {
+                xmin--;
+                xmax--;
+                xmid--;
+                //curse.x++;
+            }
+            while (curse.x >= xmax) {
+                xmin++;
+                xmax++;
+                xmid++;
+                //curse.x--;
+            }
+            while (curse.y < ymin) {
+                ymin--;
+                ymax--;
+                ymid--;
+                //curse.y++;
+            }
+            while (curse.y >= ymax) {
+                ymin++;
+                ymax++;
+                ymid++;
+                //curse.y--;
+            }
+            if (mode == 0) {
+                render();
+                curse.draw();
             }
             if (mode == 1) {
-                if (key in up) {
-                    console.log(color);
-                    color[select] += 1;
-                    color[select] = mod(color[select], 256);
-                }
-                if (key in down) {
-                    color[select] -= 1;
-                    color[select] = mod(color[select], 256);
-                }
-                if (key in left) {
-                    select -= 1;
-                    select = mod(select, 3);
-                }
-                if (key in right) {
-                    select += 1;
-                    select = mod(select, 3);
-                }
-                if (key == 'p') {
-                    promptColor()
-                }
-                if (key == 'b') {
-                    backg = makeColor(color);
-                }
                 drawcolor(select);
             }
-        }
-    }
-    document.addEventListener("keydown", function onEvent(event) {
-        keyHandler(event)
-    })
-    window.addEventListener("resize", function() {
-        cavnas.width = window.innerWidth;
-        cavnas.height = window.innerHeight;
-        ratio = cavnas.width / cavnas.height;
-        xmin = xmid - (ratio * (ydist / 2));
-        xmax = xmid + (ratio * (ydist / 2));
-        xdist = xmax - xmin;
-        xsize = cavnas.width / xdist;
-        ysize = cavnas.height / ydist;
-        if (mode == 0) {
-            render();
-            curse.draw();
-        }
-        if (mode == 1) {
-            drawcolor(select);
-        }
-    })
-</script>
+        })
+    </script>
