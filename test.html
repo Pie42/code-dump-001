@@ -303,6 +303,10 @@ async function easyBulkAdd(array) {
     }
 }
 
+function exportAlbums() {
+    console.log(JSON.stringify(albums.map(i=>i[4])));
+}
+
 function prevSong() {
     if (audio.currentTime > 5 || prevTracks.length == 0) {
         audio.src = "";
@@ -335,7 +339,11 @@ async function playSong(t) {
     titleA.innerHTML = trackArray[1];
     artist.innerHTML = trackArray[0];
     audio.currentTime = 0;
-    audio.play();
+    try {
+        audio.play()
+    } catch(e) {
+        refetchAlbum(currentAlbum)
+    }
     update(trackArray[4], trackArray);
 }
 
