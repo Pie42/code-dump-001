@@ -2,7 +2,7 @@
 	<script src="browser-id3-writer.js"></script>
 <script>let input = document.createElement('input'),
     addButton = document.createElement('button'),
-    dl = !!ID3Writer,
+    dl = !!window?.ID3Writer,
     albums = {},
     tracks = {},
     audio = document.createElement('audio'),
