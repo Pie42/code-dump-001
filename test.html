@@ -1,274 +1,525 @@
 <body>
-<script>let input = document.createElement("input"),
-    albums = [],
+	<script src="browser-id3-writer.js"></script>
+<script>let input = document.createElement('input'),
+    addButton = document.createElement('button'),
+    dl = !!ID3Writer,
+    albums = {},
     tracks = {},
-    audio = document.createElement("audio"),
-    title = document.createElement("div"),
-    titleA = document.createElement("a"),
-    artist = document.createElement("h3"),
-    albumP = document.createElement("a"),
-    smallAlbumImage = document.createElement("img"),
-    ctime = document.createElement("p"),
-    duration = document.createElement("p"),
-    coverDiv = document.createElement("div"),
-    favicon = document.createElement("link"),
+    audio = document.createElement('audio'),
+    title = document.createElement('div'),
+    titleA = document.createElement('a'),
+    titleH = document.createElement('h1'),
+    artist = document.createElement('h3'),
+    albumP = document.createElement('a'),
+    smallAlbumImage = document.createElement('img'),
+    ctime = document.createElement('p'),
+    duration = document.createElement('p'),
+    coverDiv = document.createElement('div'),
+    favicon = document.createElement('link'),
+    leftDiv = document.createElement('div'),
+    rightDiv = document.createElement('div'),
     currentTrack = undefined,
     currentFullTrack = undefined,
     currentAlbum = undefined,
     currentMenu = undefined,
+    currentAlbumMenu = undefined,
     shuffle = true,
     prevTracks = [],
     nextTracks = [],
-    statusLabel = document.createElement("p"),
-    keyGen = 0;
+    nextRandom = undefined,
+    statusLabel = document.createElement('p'),
+    keyGen = 0,
+    alKeyGen = 0,
+    profiles = JSON.parse(
+        localStorage.getItem('badcnamp-profiles') || '["Default"]'
+    ),
+    currentProfile = profiles[0],
+    // if you have a separate cors proxy, put that here
+    path = '';
 
-statusLabel.classList.add("btnStop");
-statusLabel.style.display = "inline";
+document.body.style.margin = '0px';
+leftDiv.style.width = rightDiv.style.width = '50%';
+leftDiv.style.height = rightDiv.style.height = '100%';
+leftDiv.style.hyphens = rightDiv.style.hyphens = 'auto';
+leftDiv.style.position = rightDiv.style.position = 'fixed';
+leftDiv.style.overflow = rightDiv.style.overflow = 'scroll';
+leftDiv.style['word-break'] = rightDiv.style['word-break'] = 'break-all';
+rightDiv.style.left = '50%';
+document.body.appendChild(leftDiv);
+document.body.appendChild(rightDiv);
+
+statusLabel.classList.add('btnStop');
+statusLabel.style.display = 'inline';
 document.body.appendChild(statusLabel);
 document.body.appendChild(albumP);
 document.body.appendChild(ctime);
 document.body.appendChild(duration);
 audio.onplay = () => {
-    statusLabel.style.display = "none";
+    statusLabel.style.display = 'none';
 };
 audio.onpause = () => {
-    statusLabel.style.display = "inline";
+    statusLabel.style.display = 'inline';
 };
-favicon.rel = "shortcut icon";
+favicon.rel = 'shortcut icon';
 document.head.appendChild(favicon);
 
+/**
+ *
+ * @param {HTMLDivElement} parentElement
+ * @param {string} innerHTML
+ * @param {Function} onclick
+ * @returns {HTMLParagraphElement}
+ */
 function createP(parentElement, innerHTML, onclick) {
-    let p = document.createElement("p");
+    let p = document.createElement('p');
     p.innerHTML = innerHTML;
-    p.classList.add("track-select");
-    p.style.display = "inline";
+    p.classList.add('track-select');
+    p.style.display = 'inline';
     p.onclick = onclick;
     parentElement.appendChild(p);
     return p;
 }
 
 //making the menu
-let menuDiv = document.createElement("div");
+let menuDiv = document.createElement('div');
 (() => {
     //button to play a track next
-    createP(menuDiv, "Play Next", () => {
+    createP(menuDiv, 'Play Next', (e) => {
+        e.preventDefault();
         nextTracks.unshift(getMenu());
     });
     br(menuDiv);
     //button to add a track to the end of the queue
-    createP(menuDiv, "Add to Queue", () => {
+    createP(menuDiv, 'Add to Queue', (e) => {
+        e.preventDefault();
         nextTracks.push(getMenu());
     });
     br(menuDiv);
     //button to completely remove a track
-    createP(menuDiv, "Remove", () => {
+    createP(menuDiv, 'Remove', (e) => {
+        e.preventDefault();
         let q = tracks[getMenu()];
         albums[q[3]][3][q[2]] = null;
         delete tracks[getMenu()];
         menuDiv.parentElement.parentElement.removeChild(menuDiv.parentElement);
         currentMenu = undefined;
     });
+    if (dl) {
+        br(menuDiv);
+        createP(menuDiv, 'Download', async (e) => {
+            e.preventDefault();
+            let a = tracks[getMenu()];
+            await download(
+                albums[a[3]][3][a[2]],
+                await fetch(path + a[4]).then((i) => i.arrayBuffer()),
+                a,
+                albums[a[3]][1]
+            );
+        });
+    }
 })();
+menuDiv.style.position = 'absolute';
+menuDiv.style.background = 'white';
 function getMenu() {
     return currentMenu;
 }
 
+//making another menu for albums
+let albumMenuDiv = document.createElement('div');
+(() => {
+    //button to play a track next
+    createP(albumMenuDiv, 'Play Next', (e) => {
+        e.preventDefault();
+        //e.stopPropagation();
+        let m = getAlbumMenu(),
+            [startKey, endKey] = albums[m][5] || [
+                albums[m].start,
+                albums[m].start + albums[m].length,
+            ];
+        for (let i = endKey - 1; i >= startKey; i--) {
+            tracks[i] && nextTracks.unshift(i);
+        }
+    });
+    br(albumMenuDiv);
+    //button to add a track to the end of the queue
+    createP(albumMenuDiv, 'Add to Queue', (e) => {
+        e.preventDefault();
+        let m = getAlbumMenu(),
+            [startKey, endKey] = albums[m][5] || [
+                albums[m].start,
+                albums[m].start + albums[m].length,
+            ];
+        for (let i = startKey; i < endKey; i++) {
+            tracks[i] && nextTracks.push(i);
+        }
+    });
+    br(albumMenuDiv);
+    //button to completely remove a track
+    createP(albumMenuDiv, 'Remove', (e) => {
+        e.preventDefault();
+        let m = getAlbumMenu(),
+            [startKey, endKey] = albums[m][5] || [
+                albums[m].start,
+                albums[m].start + albums[m].length,
+            ];
+        for (let i = startKey; i < endKey; i++) {
+            delete tracks[i];
+        }
+        //albums.splice(al, 1);
+        delete albums[m];
+        let ls = JSON.parse(
+            localStorage.getItem(`badcnamp-albums~${currentProfile}`) || '{}'
+        );
+        delete ls[m];
+        localStorage.setItem(
+            `badcnamp-albums~${currentProfile}`,
+            JSON.stringify(ls)
+        );
+        //leftDiv.removeChild(albumDiv);
+        leftDiv.removeChild(albumMenuDiv.parentElement.parentElement.parentElement);
+    });
+    if (dl) {
+        br(albumMenuDiv);
+        createP(albumMenuDiv, 'Download', async (e) => {
+            e.preventDefault();
+            let m = getAlbumMenu(),
+                [startKey, endKey] = albums[m][5] || [
+                    albums[m].start,
+                    albums[m].start + albums[m].length,
+                    await addAlbum(albums[m], m),
+                ],
+                pic = await fetch(path + albums[getAlbumMenu()][0]).then((i) =>
+                    i.arrayBuffer()
+                );
+            for (let i = startKey; i < endKey; i++) {
+                await download(
+                    albums[tracks[i][3]][3][tracks[i][2]],
+                    pic,
+                    tracks[i],
+                    albums[tracks[i][3]][1]
+                );
+            }
+        });
+    }
+})();
+albumMenuDiv.style.position = 'absolute';
+albumMenuDiv.style.background = 'white';
+function getAlbumMenu() {
+    return currentAlbumMenu;
+}
+
 //controls (so you don't always have to use the mediacontrols, which are less convenient when you're on the page)
-let buttonsDiv = document.createElement("div");
+let buttonsDiv = document.createElement('div');
 //back a track
-createP(buttonsDiv, "\u23ee", prevSong);
+createP(buttonsDiv, '\u23ee', prevSong);
 //back 5 seconds
-createP(buttonsDiv, "\u23ea", () => {
+createP(buttonsDiv, '\u23ea', () => {
     audio.currentTime -= 5;
 });
-//buttonsDiv.appendChild(audio);
 //forwards 5 seconds
-createP(buttonsDiv, "\u23e9", () => {
+createP(buttonsDiv, '\u23e9', () => {
     audio.currentTime += 5;
 });
 //forwards a track
-createP(buttonsDiv, "\u23ed", nextSong);
-let shuffleButton = createP(buttonsDiv, "\ud83d\udd00", () => {
+createP(buttonsDiv, '\u23ed', nextSong);
+let shuffleButton = createP(buttonsDiv, '\ud83d\udd00', () => {
     shuffle = !shuffle;
-    shuffleButton.innerHTML = shuffle ? "\ud83d\udd00" : "\ud83d\udd01";
+    shuffleButton.innerHTML = shuffle ? '\ud83d\udd00' : '\ud83d\udd01';
 });
-buttonsDiv.classList.add("buttons-div");
+buttonsDiv.classList.add('buttons-div');
 
 audio.controls = 1;
 audio.volume = 0.5;
-ctime.style.display = "none";
-ctime.classList.add("start");
-duration.style.display = "none";
-duration.classList.add("finish");
-audio.classList.add("ctl");
-audio.id = "player";
-coverDiv.classList.add("thumbnail");
+ctime.style.display = 'none';
+ctime.classList.add('start');
+duration.style.display = 'none';
+duration.classList.add('finish');
+audio.classList.add('ctl');
+audio.id = 'player';
+coverDiv.classList.add('thumbnail');
 smallAlbumImage.style.width = smallAlbumImage.style.height = 200;
-artist.id = "newPlayerArtistName";
-title.classList.add("tracktitle");
-albumP.classList.add("albumtitle");
+artist.id = 'newPlayerArtistName';
+title.classList.add('tracktitle');
+albumP.classList.add('albumtitle');
+titleA.style.display = 'none';
 title.appendChild(titleA);
+title.appendChild(titleH);
 function br(element = document.body) {
-    element.appendChild(document.createElement("br"));
+    element.appendChild(document.createElement('br'));
 }
 
-document.body.appendChild(input);
+addButton.innerHTML = 'Add';
+addButton.onclick = () => {
+    addAlbum(input);
+};
+input.placeholder = 'Paste an album link here and press enter';
+leftDiv.appendChild(input);
+leftDiv.appendChild(addButton);
 br();
-document.body.appendChild(coverDiv);
+rightDiv.appendChild(coverDiv);
 coverDiv.appendChild(smallAlbumImage);
-document.body.appendChild(title);
-document.body.appendChild(artist);
-document.body.appendChild(audio);
-document.body.appendChild(buttonsDiv);
+rightDiv.appendChild(title);
+rightDiv.appendChild(artist);
+rightDiv.appendChild(audio);
+rightDiv.appendChild(buttonsDiv);
 br();
+loadAlbums(currentProfile);
 
 function getAlbums() {
     return albums;
 }
 
-async function addAlbum(input) {
+/**
+ *
+ * @param {HTMLInputElement} input The input element containing the link to be added
+ * @param {Number=} replace
+ * @param {Boolean} expand
+ * @returns
+ */
+async function addAlbum(input, replace = -1, expand = false) {
     let linku = input.value;
-    await fetch(linku)
+    await fetch(path + linku)
         .then((i) => i.text())
         .then((i) => {
-        let desc = i.match(
-            /<meta name="description" content="\n?([^]+?)\n?">/
-        )[1],
-            image = i.match(
-                /<a class="popupImage"[^]+?<img src="(.+?)"/
-            )[1],
-            tralbumData = JSON.parse(
-                i
-                .match(/data-tralbum="(.+?\})"/)[1]
-                .replaceAll("&quot;", '"')
-                .replaceAll("&#39;", "'")
-                .replaceAll("\n", "<br>")
-                .replaceAll("&amp;", "&")
-            ),
-            trackInfo = tralbumData.trackinfo,
-            cover = document.createElement("img"),
-            p = document.createElement("div"),
-            albumDiv = document.createElement("div"),
-            al = albums.length,
-            num = true;
+            let desc = i.match(
+                    /<meta name="description" content="\n?([^]+?)\n?">/
+                )[1],
+                image = i.match(
+                    /<a class="popupImage"[^]+?<img src="(.+?)"/
+                )[1],
+                tralbumData = JSON.parse(
+                    i
+                        .match(/data-tralbum="(.+?\})"/)[1]
+                        .replaceAll('&quot;', '"')
+                        .replaceAll('&#39;', "'")
+                        .replaceAll('\n', '<br>')
+                        .replaceAll('&amp;', '&')
+                ),
+                trackInfo = tralbumData.trackinfo,
+                cover = document.createElement('img'),
+                p = document.createElement('div'),
+                albumDiv = document.createElement('div'),
+                tracksDisplay = document.createElement('div'),
+                //al = albums.length,
+                al = replace < 0 ? alKeyGen : replace,
+                num = true,
+                startKey = keyGen,
+                trackTitles = [];
 
-        for (let j in trackInfo) {
-            if (trackInfo[j].title.match(/^\d/) == null) {
-                num = false;
-                break;
+            for (let j in trackInfo) {
+                if (trackInfo[j].title.match(/^\d/) == null) {
+                    num = false;
+                    break;
+                }
             }
-        }
 
-        for (let j in trackInfo) {
-            if (trackInfo[j]?.file?.["mp3-128"]) {
-                let itemDiv = document.createElement("div"),
-                    a = document.createElement("p"),
-                    menu = document.createElement("p"),
-                    parsedTitle = num
-                ? trackInfo[j].title.match(
-                    /^\d*?(?:\. | |\.)(.+) - (.+?)$/
-                )
-                : trackInfo[j].title.match(/^(.+) - (.+?)$/),
-                    trackArtist =
-                    trackInfo[j].artist ||
-                    parsedTitle?.[1] ||
-                        tralbumData.artist,
+            // creating the display for all of the tracks (track view)
+            for (let j in trackInfo) {
+                if (trackInfo[j]?.file?.['mp3-128']) {
+                    let parsedTitle = num
+                            ? trackInfo[j].title.match(
+                                  /^\d*?(?:\. | |\.)(.+) - (.+?)$/
+                              )
+                            : trackInfo[j].title.match(/^(.+) - (.+?)$/),
+                        trackArtist =
+                            trackInfo[j].artist ||
+                            parsedTitle?.[1] ||
+                            tralbumData.artist,
                         trackTitle = parsedTitle?.[2] || trackInfo[j].title,
-                            tracksLen = keyGen;
-                tracks[keyGen] = [
-                    trackArtist,
-                    trackTitle,
-                    j,
-                    albums.length,
-                    image,
-                ];
-                a.onclick = () => {
-                    playSong(tracksLen);
-                };
-                keyGen++;
-                a.innerHTML = trackInfo[j].title;
-                menu.innerHTML = " >";
-                menu.style.display = a.style.display = "inline";
-                menu.onclick = (e) => {
-                    e.preventDefault();
-                    if (currentMenu != tracksLen) {
-                        if (currentMenu != undefined) {
-                            menuDiv.parentElement.children[1].innerHTML =
-                                " >";
-                            menuDiv.parentElement.removeChild(menuDiv);
-                        }
-                        itemDiv.appendChild(menuDiv);
-                        currentMenu = tracksLen;
-                        menu.innerHTML = " v";
+                        tracksLen;
+                    trackTitles.push([trackArtist, trackTitle]);
+                    if (replace + 1) {
+                        tracksLen = albums[replace].start + +j;
                     } else {
-                        menu.innerHTML = " >";
-                        menuDiv.parentElement.removeChild(menuDiv);
-                        currentMenu = undefined;
+                        tracksLen = keyGen;
+                        tracks[keyGen] = [
+                            trackArtist,
+                            trackTitle,
+                            j,
+                            al,
+                            image,
+                        ];
+                        keyGen++;
                     }
-                };
-                a.classList.add("track-select");
-                menu.classList.add("track-select");
-                itemDiv.appendChild(a);
-                itemDiv.appendChild(menu);
-                p.appendChild(itemDiv);
+                    p.appendChild(
+                        createTrackDiv(
+                            trackArtist + ' - ' + trackTitle,
+                            tracksLen
+                        )
+                    );
+                }
             }
-        }
-        albums.push([image, tralbumData, cover, trackInfo, linku]);
-        audio.controls = true;
-        cover.src = image;
-        cover.onclick = () => {
-            refetchAlbum(al);
-        };
-        cover.title =
-            "Click to re-fetch the track links for this album! (in case playing stops working)";
-        albumDiv.album = linku;
-        albumDiv.appendChild(cover);
-        albumDiv.appendChild(p);
-        document.body.appendChild(albumDiv);
-        input.value = "";
-    });
+
+            // creating the basic album display
+            let titleDiv = document.createElement('div'),
+                albumTitle =
+                    (tralbumData.current.artist || tralbumData.artist) +
+                    ' - ' +
+                    tralbumData.current.title,
+                expanded = false,
+                endKey = keyGen;
+
+            let moreButton = createP(titleDiv, '(...) ', (e) => {
+                    if (e.target == moreButton) {
+                        //e.preventDefault();
+                        if (currentAlbumMenu != al) {
+                            if (currentAlbumMenu != undefined) {
+                                //titleDiv.parentElement.children[1].innerHTML =
+                                //'(...) ';
+                            }
+                            currentAlbumMenu = al;
+                            moreButton.innerHTML = '(...) ';
+                            moreButton.appendChild(albumMenuDiv);
+                        } else {
+                            moreButton.innerHTML = '(...) ';
+                            currentAlbumMenu = undefined;
+                        }
+                    }
+                }),
+                titleDisplay = createP(titleDiv, albumTitle + ' >', () => {
+                    if (expanded) {
+                        albumDiv.removeChild(tracksDisplay);
+                        titleDisplay.innerHTML = albumTitle + ' >';
+                    } else {
+                        albumDiv.appendChild(tracksDisplay);
+                        titleDisplay.innerHTML = albumTitle + ' v';
+                    }
+                    expanded = !expanded;
+                });
+            //smallCover.onclick = titleDisplay.onclick;
+            albumDiv.appendChild(titleDiv);
+
+            //albums.push([image, tralbumData, cover, trackInfo, linku]);
+            if (replace + 1) {
+                //leftDiv.replaceChild(albumDiv, albums[replace]);
+                albums[replace].replaceChild(
+                    titleDiv,
+                    albums[replace].children[0]
+                );
+                albums[replace] = [
+                    image,
+                    tralbumData,
+                    cover,
+                    trackInfo,
+                    linku,
+                    [startKey, endKey],
+                    [albumTitle, trackTitles],
+                ];
+                expand && titleDisplay.click();
+            } else {
+                albums[alKeyGen] = [
+                    image,
+                    tralbumData,
+                    cover,
+                    trackInfo,
+                    linku,
+                    [startKey, endKey],
+                    [albumTitle, trackTitles],
+                ];
+                saveAlbum(alKeyGen, currentProfile);
+                alKeyGen++;
+                leftDiv.appendChild(albumDiv);
+            }
+            audio.controls = true;
+            cover.src = image;
+            cover.onclick = () => refetchAlbum(al);
+            cover.title =
+                'Click to re-fetch the track links for this album! (in case playing stops working)';
+            cover.style.width = '100%';
+            albumDiv.album = linku;
+            tracksDisplay.appendChild(cover);
+            tracksDisplay.appendChild(p);
+            tracksDisplay.appendChild(document.createElement('hr'));
+            input.value = '';
+        });
     return;
 }
 
+function createTrackDiv(title, num) {
+    let itemDiv = document.createElement('div'),
+        a = createP(itemDiv, title, () => playSong(num)),
+        menu = createP(itemDiv, ' >', (e) => {
+            e.preventDefault();
+            if (currentMenu != num) {
+                if (currentMenu != undefined) {
+                    menuDiv.parentElement.children[1].innerHTML = ' >';
+                    menuDiv.parentElement.removeChild(menuDiv);
+                }
+                itemDiv.appendChild(menuDiv);
+                currentMenu = num;
+                menu.innerHTML = ' v';
+            } else {
+                menu.innerHTML = ' >';
+                menuDiv.parentElement.removeChild(menuDiv);
+                currentMenu = undefined;
+            }
+        });
+    a.classList.add('track-select');
+    menu.classList.add('track-select');
+    return itemDiv;
+}
+
+/**
+ *
+ * @param {Number} al The id/index of the album to be refetched
+ * @returns nothing
+ */
 async function refetchAlbum(al) {
-    await fetch(albums[al][4])
-        .then((i) => i.text(), () => {})
-        .then((i) => {
-        let tralbumData = JSON.parse(
-            i
-            .match(/data-tralbum="(.+?\})"/)[1]
-            .replaceAll("&quot;", '"')
-            .replaceAll("&#39;", "'")
-            .replaceAll("\n", "<br>")
-            .replaceAll("&amp;", "&")
-        ),
-            trackInfo = tralbumData.trackinfo;
-        albums[al][1] = tralbumData;
-        albums[al][3] = trackInfo;
-    }, () => {});
-    return;
+    if (albums[al][4]) {
+        await fetch(path + albums[al][4])
+            .then(
+                (i) => i.text(),
+                () => {}
+            )
+            .then(
+                (i) => {
+                    let tralbumData = JSON.parse(
+                            i
+                                .match(/data-tralbum="(.+?\})"/)[1]
+                                .replaceAll('&quot;', '"')
+                                .replaceAll('&#39;', "'")
+                                .replaceAll('\n', '<br>')
+                                .replaceAll('&amp;', '&')
+                        ),
+                        trackInfo = tralbumData.trackinfo;
+                    albums[al][1] = tralbumData;
+                    albums[al][3] = trackInfo;
+                },
+                () => {}
+            );
+        return;
+    } else {
+        await addAlbum(albums[al], al);
+    }
 }
 
-document.addEventListener("keydown", (e) => {
-    if (e.key == "Enter") {
+document.addEventListener('keydown', (e) => {
+    if (e.key == 'Enter') {
         addAlbum(input);
     }
 });
-audio.addEventListener("ended", nextSong);
+audio.addEventListener('ended', nextSong);
 audio.ontimeupdate = () => {
     ctime.innerHTML = tformat(audio.currentTime, audio.duration);
     duration.innerHTML = tformat(audio.duration, audio.duration);
 };
-if ("mediaSession" in navigator) {
-    navigator.mediaSession.setActionHandler("seekbackward", function () {
+
+if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('seekbackward', function () {
         audio.currentTime -= 5;
     });
-    navigator.mediaSession.setActionHandler("seekforward", function () {
+    navigator.mediaSession.setActionHandler('seekforward', function () {
         audio.currentTime += 5;
     });
-    navigator.mediaSession.setActionHandler("previoustrack", prevSong);
-    navigator.mediaSession.setActionHandler("nexttrack", nextSong);
+    navigator.mediaSession.setActionHandler('previoustrack', prevSong);
+    navigator.mediaSession.setActionHandler('nexttrack', nextSong);
 }
+
+/*(() => {
+    window.onbeforeunload = function () {
+        return 'Are you sure you want to leave?';
+    };
+})();*/
 
 function nextSong() {
     prevTracks.push(currentFullTrack);
@@ -294,6 +545,10 @@ function nextSong() {
     }
 }
 
+/**
+ *
+ * @param {Array.<String>} array An array of album links
+ */
 async function easyBulkAdd(array) {
     if (array.length) {
         await addAlbum({ value: array.shift() });
@@ -304,12 +559,12 @@ async function easyBulkAdd(array) {
 }
 
 function exportAlbums() {
-    console.log(JSON.stringify(albums.map(i=>i[4])));
+    console.log(JSON.stringify(albums.map((i) => i[4])));
 }
 
 function prevSong() {
     if (audio.currentTime > 5 || prevTracks.length == 0) {
-        audio.src = "";
+        audio.src = '';
         playSong(currentFullTrack);
     } else {
         let t = prevTracks.pop();
@@ -318,38 +573,48 @@ function prevSong() {
     }
 }
 
+/**
+ *
+ * @param {Number} t The id/index of the song to be played in tracks
+ */
 async function playSong(t) {
     let trackArray = tracks[t];
     currentFullTrack = t;
-    console.log(t);
     currentTrack = trackArray[2];
     currentAlbum = trackArray[3];
     //making sure that the song can be played
     if (
-        albums[currentAlbum][3][currentTrack]["file"]["mp3-128"].match(
+        !albums[currentAlbum][3] ||
+        albums[currentAlbum][3][currentTrack]['file']['mp3-128'].match(
             /ts=(.+?)\&/
         )[1] *
-        1000 -
-        Date.now() <
-        5000000
+            1000 -
+            Date.now() <
+            5000000
     ) {
         await refetchAlbum(currentAlbum);
     }
-    audio.src = albums[currentAlbum][3][currentTrack]["file"]["mp3-128"];
+    audio.src = albums[currentAlbum][3][currentTrack]['file']['mp3-128'];
     titleA.innerHTML = trackArray[1];
+    titleH.innerHTML = trackArray[1];
     artist.innerHTML = trackArray[0];
     audio.currentTime = 0;
     try {
-        audio.play()
-    } catch(e) {
-        refetchAlbum(currentAlbum)
+        audio.play();
+    } catch (e) {
+        refetchAlbum(currentAlbum);
     }
     update(trackArray[4], trackArray);
 }
 
+/**
+ *
+ * @param {String} image A link to the album image
+ * @param {Array} trackArray The entry in tracks for the song
+ */
 function update(image, trackArray) {
     smallAlbumImage.src = image;
-    if ("mediaSession" in navigator) {
+    if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: trackArray[1],
             artist: trackArray[0],
@@ -360,17 +625,213 @@ function update(image, trackArray) {
     favicon.href = image;
 
     albumP.title = albums[currentAlbum][1].current.title;
-    statusLabel.style.display = "inline";
+    statusLabel.style.display = 'inline';
 }
 
+/**
+ *
+ * @param {Object} a The TrackInfo for the song
+ * @param {ArrayBuffer} pic An ArrayBuffer containing the data for the cover image
+ * @param {Array} b The entry in tracks for the song (contains the formatted title + artist)
+ * @param {Object} c The entry in TralbumData for the album
+ */
+async function download(a, pic = null, b, c) {
+    fetch(path + a.file['mp3-128'])
+        .then((i) => i.arrayBuffer())
+        .then((i) => {
+            const writer = new ID3Writer(i);
+            //title
+            writer
+                .setFrame('TIT2', b[1])
+                //artists
+                .setFrame(
+                    'TPE1',
+                    b[0].split(',').map((j) => j.trim())
+                )
+                //album artist
+                .setFrame('TPE2', c.current.artist || c.artist)
+                //release year
+                .setFrame(
+                    'TYER',
+                    +c.album_release_date.match(/\d+ \w+ (\d+)/)[1]
+                )
+                //length
+                .setFrame('TLEN', a.duration * 1000)
+                //album title
+                .setFrame('TALB', c.current.title)
+                //track number
+                .setFrame('TRCK', a.track_num);
+            if (pic) {
+                writer.setFrame('APIC', {
+                    type: 3,
+                    data: pic,
+                    description: 'cover',
+                });
+            }
+            writer.addTag();
+            let as = document.createElement('a');
+            as.href = writer.getURL();
+            as.download =
+                b[0]
+                    .split(',')
+                    .map((j) => j.trim())
+                    .join(', ') +
+                ' - ' +
+                b[1] +
+                '.mp3';
+            as.click();
+            URL.revokeObjectURL(as.href);
+        });
+}
+
+/**
+ *
+ * @param {Number} al
+ * @param {String=} profile
+ */
+function saveAlbum(al, profile = 'Default') {
+    let ls = JSON.parse(
+            localStorage.getItem(`badcnamp-albums~${profile}`) || '{}'
+        ),
+        albumToSave = albums[al];
+    // left to right: cover link, album link, album and track data
+    ls[al] = [albumToSave[0], albumToSave[4], albumToSave[6]];
+    localStorage.setItem(`badcnamp-albums~${profile}`, JSON.stringify(ls));
+}
+
+/**
+ *
+ * @param {String} profile
+ */
+function loadAlbums(profile = 'Default') {
+    let ls = JSON.parse(
+            localStorage.getItem(`badcnamp-albums~${profile}`) || '{}'
+        ),
+        albumKeys = Object.keys(ls)
+            .filter((i) => +i + 1)
+            .map((i) => +i)
+            .sort((a, b) => a - b);
+    for (let i in ls) {
+        let albumData = ls[i][2],
+            albumDiv = document.createElement('div'),
+            titleDiv = document.createElement('div'),
+            trackListDiv = document.createElement('div'),
+            cover = document.createElement('img'),
+            moreButton = createP(titleDiv, '(...) ', (e) => {
+                if (e.target == moreButton) {
+                    //e.preventDefault();
+                    if (currentAlbumMenu != i) {
+                        if (currentAlbumMenu != undefined) {
+                            albumDiv.parentElement.children[1].innerHTML =
+                                '(...) ';
+                        }
+                        currentAlbumMenu = i;
+                        moreButton.innerHTML = '(...) ';
+                        moreButton.appendChild(albumMenuDiv);
+                    } else {
+                        moreButton.innerHTML = '(...) ';
+                        currentAlbumMenu = undefined;
+                    }
+                }
+            }),
+            expanded = false,
+            titleDisplay = createP(titleDiv, albumData[0] + ' >', () => {
+                if (placeholder) {
+                    //addAlbum({ value: ls[i][1] }, i, true);
+                    refetchAlbum(i);
+                    placeholder = false;
+                }
+                if (expanded) {
+                    albumDiv.removeChild(trackListDiv);
+                    titleDisplay.innerHTML = albumData[0] + ' >';
+                } else {
+                    albumDiv.appendChild(trackListDiv);
+                    titleDisplay.innerHTML = albumData[0] + ' v';
+                }
+                expanded = !expanded;
+            }),
+            startKey = keyGen,
+            placeholder = true;
+        cover.src = ls[i][0];
+        trackListDiv.appendChild(cover);
+        albumDiv.appendChild(titleDiv);
+        for (let j in albumData[1]) {
+            trackListDiv.appendChild(
+                createTrackDiv(
+                    `${albumData[1][j][0]} - ${albumData[1][j][1]}`,
+                    keyGen
+                )
+            );
+            tracks[keyGen] = [
+                albumData[1][j][0],
+                albumData[1][j][1],
+                j,
+                i,
+                ls[i][0],
+            ];
+            keyGen++;
+        }
+        albumDiv.value = ls[i][1];
+        albumDiv.start = startKey;
+        albumDiv.length = albumData[1].length;
+        leftDiv.appendChild(albumDiv);
+        //albums[i] = albumDiv;
+        albums[i] = [
+            ls[i][0],
+            undefined,
+            cover,
+            undefined,
+            ls[i][1],
+            [startKey, startKey + albumData[1].length],
+            albumData,
+        ];
+    }
+    alKeyGen = albumKeys?.[albumKeys.length - 1] + 1 || alKeyGen;
+}
+
+/**
+ *
+ * @param {Number} t Current time
+ * @param {Number} l Total length of the song (for choosing whether to include the hour digit)
+ * @returns {String}
+ */
 function tformat(t, l) {
-    let hr = "",
-        mn = ("0" + (((t / 60) | 0) % 60) + ":").slice(-3),
-        sc = ("0" + (t % 60 | 0)).slice(-2);
+    let hr = '',
+        mn = ('0' + (((t / 60) | 0) % 60) + ':').slice(-3),
+        sc = ('0' + (t % 60 | 0)).slice(-2);
     if (l > 3600) {
-        hr = ("0" + ((t / 3600) | 0) + ":").slice(-3);
+        hr = ('0' + ((t / 3600) | 0) + ':').slice(-3);
     }
     return hr + mn + sc;
-}</script>
-	<style>p.track-select{margin-block-end: 0px; margin-block-start: 0px; width: fit-content} p.track-select:hover{cursor: pointer} p#statusLabel{display: hidden} .buttons-div p{font-size: 48; vertical-align: text-bottom}</style>
-</body>
+}
+</script>
+	<style>p.track-select {
+            margin-block-end: 0px;
+            margin-block-start: 0px;
+            width: fit-content
+        }
+
+        p.track-select:hover {
+            cursor: pointer
+        }
+
+        p#statusLabel {
+            display: hidden
+        }
+
+        .buttons-div p {
+            font-size: 48;
+            vertical-align: text-bottom
+        }
+
+        input {
+            position: sticky;
+            top: 0;
+            width: inherit;
+        }
+
+        button {
+            position: sticky;
+            top: 0;
+            width: inherit;
+		}</style></body>
